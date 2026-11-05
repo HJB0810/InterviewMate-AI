@@ -1,0 +1,861 @@
+================================================================================
+FILE      : SQL_Interview_QA.txt
+SUBJECT   : SQL & Databases — Interview Questions & Answers
+QUESTIONS : 20
+LEVELS    : Beginner (7) | Intermediate (8) | Advanced (5)
+PROJECT   : InterviewMate AI — IBM SkillsBuild AICTE-2026
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : SQL-001
+TOPIC    : SELECT & Filtering
+DIFFICULTY: Beginner
+--------------------------------------------------------------------------------
+QUESTION :
+What is the difference between WHERE and HAVING in SQL?
+
+ANSWER :
+Both filter rows, but they operate at different stages of query execution:
+
+  WHERE  — Filters rows BEFORE aggregation (GROUP BY). Cannot reference
+           aggregate functions.
+
+  HAVING — Filters groups AFTER aggregation. Used with GROUP BY to filter
+           on aggregate values.
+
+  -- Count orders per customer; show only those with > 5 orders
+  SELECT customer_id, COUNT(*) AS order_count
+  FROM orders
+  WHERE status = 'completed'       -- filter individual rows first
+  GROUP BY customer_id
+  HAVING COUNT(*) > 5;             -- filter groups after aggregation
+
+  -- WRONG: cannot use aggregate in WHERE
+  SELECT customer_id, COUNT(*) AS order_count
+  FROM orders
+  WHERE COUNT(*) > 5   -- ERROR
+  GROUP BY customer_id;
+
+  Execution order: FROM → WHERE → GROUP BY → HAVING → SELECT → ORDER BY → LIMIT
+
+KEYWORDS : WHERE, HAVING, GROUP BY, aggregate, filter, execution order
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : SQL-002
+TOPIC    : JOINs
+DIFFICULTY: Beginner
+--------------------------------------------------------------------------------
+QUESTION :
+Explain the different types of SQL JOINs with examples.
+
+ANSWER :
+  INNER JOIN — Returns rows that have matching values in BOTH tables.
+
+  LEFT (OUTER) JOIN — All rows from the left table; matching rows from right.
+                      NULL for non-matching right-side columns.
+
+  RIGHT (OUTER) JOIN — All rows from the right table; matching from left.
+
+  FULL OUTER JOIN — All rows from both tables; NULLs where no match.
+
+  CROSS JOIN — Every combination of rows from both tables (cartesian product).
+
+  -- Setup: customers (id, name) and orders (id, customer_id, amount)
+
+  -- Customers who placed at least one order
+  SELECT c.name, o.amount
+  FROM customers c
+  INNER JOIN orders o ON c.id = o.customer_id;
+
+  -- ALL customers, with orders if they exist (NULL if no orders)
+  SELECT c.name, o.amount
+  FROM customers c
+  LEFT JOIN orders o ON c.id = o.customer_id;
+
+  -- Customers with NO orders
+  SELECT c.name
+  FROM customers c
+  LEFT JOIN orders o ON c.id = o.customer_id
+  WHERE o.id IS NULL;
+
+KEYWORDS : INNER JOIN, LEFT JOIN, RIGHT JOIN, FULL OUTER JOIN, NULL, ON
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : SQL-003
+TOPIC    : Aggregate Functions
+DIFFICULTY: Beginner
+--------------------------------------------------------------------------------
+QUESTION :
+What are SQL aggregate functions? List five with examples.
+
+ANSWER :
+Aggregate functions compute a single value from a set of rows.
+
+  COUNT(*) — total number of rows
+  COUNT(column) — non-NULL values in column
+  SUM(column)   — total of numeric values
+  AVG(column)   — arithmetic mean
+  MIN(column)   — smallest value
+  MAX(column)   — largest value
+
+  -- Example: sales summary per product category
+  SELECT
+      category,
+      COUNT(*)            AS total_orders,
+      SUM(amount)         AS revenue,
+      AVG(amount)         AS avg_order_value,
+      MIN(amount)         AS min_order,
+      MAX(amount)         AS max_order
+  FROM orders
+  GROUP BY category
+  ORDER BY revenue DESC;
+
+  NULL handling: COUNT(*) counts all rows including NULLs; COUNT(column)
+  ignores NULLs. SUM/AVG/MIN/MAX all ignore NULLs.
+
+KEYWORDS : COUNT, SUM, AVG, MIN, MAX, aggregate, GROUP BY, NULL
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : SQL-004
+TOPIC    : Subqueries
+DIFFICULTY: Beginner
+--------------------------------------------------------------------------------
+QUESTION :
+What is a subquery? Give examples of a subquery in WHERE, FROM, and SELECT.
+
+ANSWER :
+A subquery is a SELECT statement nested inside another SQL statement.
+
+  -- 1. Subquery in WHERE (scalar subquery — returns one value)
+  SELECT name, salary
+  FROM employees
+  WHERE salary > (SELECT AVG(salary) FROM employees);
+
+  -- 2. Subquery in WHERE with IN (returns a list)
+  SELECT name
+  FROM customers
+  WHERE id IN (
+      SELECT DISTINCT customer_id FROM orders WHERE amount > 1000
+  );
+
+  -- 3. Subquery in FROM (derived table / inline view)
+  SELECT dept, avg_sal
+  FROM (
+      SELECT department AS dept, AVG(salary) AS avg_sal
+      FROM employees
+      GROUP BY department
+  ) AS dept_averages
+  WHERE avg_sal > 60000;
+
+  -- 4. Subquery in SELECT (correlated — runs once per outer row)
+  SELECT
+      name,
+      (SELECT COUNT(*) FROM orders WHERE customer_id = c.id) AS order_count
+  FROM customers c;
+
+KEYWORDS : subquery, correlated subquery, IN, scalar subquery, derived table
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : SQL-005
+TOPIC    : Indexes
+DIFFICULTY: Beginner
+--------------------------------------------------------------------------------
+QUESTION :
+What is a database index and when should you create one?
+
+ANSWER :
+An index is a data structure (typically a B-tree) that the database engine
+maintains to speed up row lookups. Without an index, a query must scan every
+row (full table scan).
+
+  -- Create a simple index
+  CREATE INDEX idx_orders_customer ON orders(customer_id);
+
+  -- Composite index (useful when both columns appear in WHERE together)
+  CREATE INDEX idx_orders_customer_status ON orders(customer_id, status);
+
+  -- Unique index (also enforces uniqueness constraint)
+  CREATE UNIQUE INDEX idx_users_email ON users(email);
+
+  WHEN TO CREATE:
+  ✓ Columns used frequently in WHERE, JOIN ON, ORDER BY.
+  ✓ Foreign key columns (many databases don't auto-index them).
+  ✓ High-cardinality columns (many distinct values).
+
+  WHEN NOT TO CREATE:
+  ✗ Small tables (full scan is fast enough).
+  ✗ Columns updated very frequently (index must be rebuilt on every write).
+  ✗ Low-cardinality columns (e.g., boolean — poor selectivity).
+
+  Indexes speed up reads but slow down INSERT/UPDATE/DELETE. Always measure
+  with EXPLAIN ANALYZE before and after adding an index.
+
+KEYWORDS : index, B-tree, full table scan, cardinality, EXPLAIN, composite index
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : SQL-006
+TOPIC    : Normalisation
+DIFFICULTY: Beginner
+--------------------------------------------------------------------------------
+QUESTION :
+What is database normalisation? Explain 1NF, 2NF, and 3NF.
+
+ANSWER :
+Normalisation is the process of organising a relational database to reduce
+redundancy and improve data integrity.
+
+  1NF (First Normal Form):
+  - Each column contains atomic (indivisible) values.
+  - No repeating groups or arrays.
+
+  VIOLATION: orders(id, customer_name, products) where products = "Pen, Book"
+  FIX: separate rows per product, or a separate order_items table.
+
+  2NF (Second Normal Form):
+  - Must be in 1NF.
+  - No partial dependency: every non-key column depends on the WHOLE
+    primary key (relevant only with composite keys).
+
+  VIOLATION: order_items(order_id, product_id, product_name)
+             product_name depends only on product_id, not the full key.
+  FIX: move product_name to a products table keyed by product_id.
+
+  3NF (Third Normal Form):
+  - Must be in 2NF.
+  - No transitive dependency: non-key columns must depend ONLY on the
+    primary key, not on other non-key columns.
+
+  VIOLATION: employees(id, dept_id, dept_name) — dept_name depends on
+             dept_id, not on id.
+  FIX: move dept_name to a departments table keyed by dept_id.
+
+KEYWORDS : normalisation, 1NF, 2NF, 3NF, redundancy, dependency, atomicity
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : SQL-007
+TOPIC    : Transactions & ACID
+DIFFICULTY: Beginner
+--------------------------------------------------------------------------------
+QUESTION :
+What are ACID properties of a database transaction?
+
+ANSWER :
+ACID ensures reliable processing of database transactions:
+
+  A — ATOMICITY
+      A transaction is all-or-nothing. If any part fails, the entire
+      transaction is rolled back.
+      Example: Transfer $100 from Account A to Account B. If debit succeeds
+      but credit fails, the debit is rolled back.
+
+  C — CONSISTENCY
+      A transaction brings the database from one valid state to another,
+      respecting all constraints (foreign keys, unique, check).
+
+  I — ISOLATION
+      Concurrent transactions execute as if they were serial. One
+      transaction's intermediate state is invisible to others (at the
+      appropriate isolation level).
+
+  D — DURABILITY
+      Once a transaction is committed, it persists even if the system
+      crashes (written to disk via write-ahead log).
+
+  -- SQL transaction syntax
+  BEGIN;
+      UPDATE accounts SET balance = balance - 100 WHERE id = 1;
+      UPDATE accounts SET balance = balance + 100 WHERE id = 2;
+  COMMIT;   -- or ROLLBACK; on error
+
+KEYWORDS : ACID, atomicity, consistency, isolation, durability, COMMIT, ROLLBACK
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : SQL-008
+TOPIC    : Window Functions
+DIFFICULTY: Intermediate
+--------------------------------------------------------------------------------
+QUESTION :
+What are SQL window functions? Explain ROW_NUMBER, RANK, DENSE_RANK, LAG,
+and LEAD with examples.
+
+ANSWER :
+Window functions perform calculations across a set of rows related to the
+current row — without collapsing rows like GROUP BY does.
+Syntax: function() OVER (PARTITION BY ... ORDER BY ...)
+
+  -- Table: sales(employee_id, month, revenue)
+
+  SELECT
+      employee_id,
+      month,
+      revenue,
+
+      -- Assign a unique row number within each employee partition
+      ROW_NUMBER() OVER (PARTITION BY employee_id ORDER BY revenue DESC)
+          AS rn,
+
+      -- RANK: same rank for ties, gaps after ties (1,1,3)
+      RANK() OVER (PARTITION BY employee_id ORDER BY revenue DESC)
+          AS rnk,
+
+      -- DENSE_RANK: same rank for ties, no gaps (1,1,2)
+      DENSE_RANK() OVER (PARTITION BY employee_id ORDER BY revenue DESC)
+          AS dense_rnk,
+
+      -- LAG: value of previous row (NULL for first row)
+      LAG(revenue)  OVER (PARTITION BY employee_id ORDER BY month)
+          AS prev_month_revenue,
+
+      -- LEAD: value of next row (NULL for last row)
+      LEAD(revenue) OVER (PARTITION BY employee_id ORDER BY month)
+          AS next_month_revenue,
+
+      -- Running total
+      SUM(revenue)  OVER (PARTITION BY employee_id ORDER BY month
+                          ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)
+          AS running_total
+
+  FROM sales;
+
+KEYWORDS : window function, OVER, PARTITION BY, ROW_NUMBER, RANK, LAG, LEAD, SUM
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : SQL-009
+TOPIC    : CTEs
+DIFFICULTY: Intermediate
+--------------------------------------------------------------------------------
+QUESTION :
+What is a Common Table Expression (CTE)? How does it differ from a subquery?
+
+ANSWER :
+A CTE is a named, temporary result set defined at the top of a query using
+WITH. It improves readability and can be referenced multiple times.
+
+  -- CTE: find top 3 customers by total spend
+  WITH customer_spend AS (
+      SELECT
+          customer_id,
+          SUM(amount) AS total_spent
+      FROM orders
+      WHERE status = 'completed'
+      GROUP BY customer_id
+  ),
+  ranked AS (
+      SELECT
+          customer_id,
+          total_spent,
+          RANK() OVER (ORDER BY total_spent DESC) AS spend_rank
+      FROM customer_spend
+  )
+  SELECT c.name, r.total_spent, r.spend_rank
+  FROM ranked r
+  JOIN customers c ON r.customer_id = c.id
+  WHERE r.spend_rank <= 3;
+
+  CTE vs SUBQUERY:
+  - CTE: defined once, can be referenced multiple times in the same query.
+  - CTE: more readable for multi-step logic.
+  - Subquery: inline, cannot be reused in the same query.
+  - Recursive CTE: can reference itself to traverse hierarchical data
+    (org charts, category trees).
+
+KEYWORDS : CTE, WITH, recursive CTE, subquery, readability, temporary result
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : SQL-010
+TOPIC    : Stored Procedures & Functions
+DIFFICULTY: Intermediate
+--------------------------------------------------------------------------------
+QUESTION :
+What is the difference between a stored procedure and a function in SQL?
+
+ANSWER :
+  STORED PROCEDURE:
+  - A named, precompiled SQL block stored in the database.
+  - Can contain DML (INSERT, UPDATE, DELETE) and transaction control.
+  - Called with CALL / EXEC, does not need to return a value.
+  - Can have IN, OUT, INOUT parameters.
+
+  FUNCTION (User-Defined Function):
+  - Must return a value (scalar or table).
+  - Can be used inside SELECT, WHERE, as a computed column.
+  - Generally should not modify data (side-effect free, though DBMS-dependent).
+
+  -- PostgreSQL function example
+  CREATE OR REPLACE FUNCTION calculate_discount(price NUMERIC, pct NUMERIC)
+  RETURNS NUMERIC AS $$
+  BEGIN
+      RETURN price * (1 - pct / 100);
+  END;
+  $$ LANGUAGE plpgsql;
+
+  SELECT name, price, calculate_discount(price, 10) AS discounted_price
+  FROM products;
+
+  -- PostgreSQL stored procedure example
+  CREATE OR REPLACE PROCEDURE archive_old_orders(cutoff_date DATE)
+  LANGUAGE plpgsql AS $$
+  BEGIN
+      INSERT INTO orders_archive SELECT * FROM orders WHERE created < cutoff_date;
+      DELETE FROM orders WHERE created < cutoff_date;
+      COMMIT;
+  END;
+  $$;
+
+  CALL archive_old_orders('2023-01-01');
+
+KEYWORDS : stored procedure, function, UDF, CALL, plpgsql, return value, DML
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : SQL-011
+TOPIC    : Query Optimisation
+DIFFICULTY: Intermediate
+--------------------------------------------------------------------------------
+QUESTION :
+How do you analyse and optimise a slow SQL query?
+
+ANSWER :
+  STEP 1: EXPLAIN / EXPLAIN ANALYZE
+    Use the query planner output to identify bottlenecks:
+
+    EXPLAIN ANALYZE
+    SELECT * FROM orders WHERE customer_id = 42 ORDER BY created DESC;
+
+    Look for: "Seq Scan" on large tables (needs index), high "cost", high
+    "actual time", large "rows" estimates.
+
+  STEP 2: ADD INDEXES
+    If a WHERE or JOIN column shows a Seq Scan, create an index.
+
+  STEP 3: REWRITE THE QUERY
+    - Replace correlated subqueries with JOINs.
+    - Use EXISTS instead of IN for large subqueries.
+    - Avoid SELECT *; fetch only needed columns.
+    - Push filters as early as possible.
+
+  STEP 4: MATERIALISE EXPENSIVE SUBQUERIES WITH CTEs or temporary tables.
+
+  STEP 5: PARTITION LARGE TABLES (range/hash partitioning) to limit scans.
+
+  STEP 6: ANALYSE / VACUUM (PostgreSQL) — keep table statistics current so
+          the planner makes accurate cost estimates.
+
+  -- EXISTS vs IN (EXISTS stops at first match — faster for large sets)
+  -- Slow:
+  SELECT name FROM customers WHERE id IN (SELECT customer_id FROM orders);
+  -- Better:
+  SELECT name FROM customers c WHERE EXISTS (
+      SELECT 1 FROM orders WHERE customer_id = c.id
+  );
+
+KEYWORDS : EXPLAIN, Seq Scan, index, EXISTS, query plan, VACUUM, ANALYZE, optimisation
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : SQL-012
+TOPIC    : Isolation Levels
+DIFFICULTY: Intermediate
+--------------------------------------------------------------------------------
+QUESTION :
+What are transaction isolation levels? Describe the anomalies each level
+prevents.
+
+ANSWER :
+Isolation levels balance data consistency against concurrency performance.
+
+  ANOMALIES:
+  - Dirty Read      : reading uncommitted changes from another transaction.
+  - Non-repeatable Read : same row returns different values within one transaction.
+  - Phantom Read    : a query returns different rows on repeated execution within
+                      one transaction (due to inserts/deletes by others).
+
+  LEVEL                 | Dirty Read | Non-repeatable | Phantom
+  ----------------------|------------|----------------|--------
+  READ UNCOMMITTED      |    YES     |      YES       |  YES
+  READ COMMITTED (default PostgreSQL/Oracle) | NO | YES | YES
+  REPEATABLE READ (default MySQL/InnoDB) | NO | NO  | YES
+  SERIALIZABLE          |    NO      |      NO        |  NO
+
+  -- Set isolation level in PostgreSQL
+  BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ;
+
+  Serializable provides the strongest guarantee but has the highest locking
+  overhead. Most production systems use READ COMMITTED, which is sufficient
+  for the majority of workloads.
+
+KEYWORDS : isolation level, dirty read, phantom read, SERIALIZABLE, READ COMMITTED
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : SQL-013
+TOPIC    : SQL vs NoSQL
+DIFFICULTY: Intermediate
+--------------------------------------------------------------------------------
+QUESTION :
+When would you choose a NoSQL database over a relational SQL database?
+
+ANSWER :
+  SQL (Relational):
+  + Strong ACID transactions.
+  + Structured data with well-defined schemas.
+  + Complex queries with JOINs.
+  + Mature tooling and decades of best practices.
+  − Vertical scaling is expensive; horizontal sharding is complex.
+  − Schema changes require migrations.
+
+  NoSQL:
+  + Horizontal scaling — distribute data across many nodes easily.
+  + Flexible schema — store varying document structures.
+  + High write throughput.
+  + Specialised data models: documents, key-value, wide-column, graph.
+
+  CHOOSE NoSQL WHEN:
+  - Data is unstructured or schema evolves rapidly (MongoDB — documents).
+  - Need ultra-fast key lookups at scale (Redis — key-value / cache).
+  - Time-series / IoT data with high write volumes (InfluxDB, Cassandra).
+  - Social graph traversal (Neo4j — graph DB).
+  - Write-heavy workloads at global scale (DynamoDB, Cassandra).
+
+  CHOOSE SQL WHEN:
+  - Financial transactions requiring ACID guarantees.
+  - Complex reporting and analytics.
+  - Relationships between entities are well-defined.
+
+KEYWORDS : SQL, NoSQL, MongoDB, Redis, Cassandra, CAP theorem, schema, ACID
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : SQL-014
+TOPIC    : Partitioning
+DIFFICULTY: Intermediate
+--------------------------------------------------------------------------------
+QUESTION :
+What is table partitioning in SQL and what are the common strategies?
+
+ANSWER :
+Partitioning divides a large table into smaller, more manageable pieces
+called partitions, improving query performance and maintenance operations.
+
+  RANGE PARTITIONING — divide by a range of values (e.g., date).
+  Ideal for time-series data; old partitions can be dropped efficiently.
+
+    -- PostgreSQL range partitioning
+    CREATE TABLE orders (
+        id INT, customer_id INT, amount NUMERIC, created DATE
+    ) PARTITION BY RANGE (created);
+
+    CREATE TABLE orders_2023 PARTITION OF orders
+        FOR VALUES FROM ('2023-01-01') TO ('2024-01-01');
+
+    CREATE TABLE orders_2024 PARTITION OF orders
+        FOR VALUES FROM ('2024-01-01') TO ('2025-01-01');
+
+  LIST PARTITIONING — divide by discrete values (e.g., country, status).
+
+  HASH PARTITIONING — distribute rows evenly across N partitions using a
+  hash function. Ideal for even load distribution with no natural range.
+
+  BENEFITS:
+  - Queries with a partition key in WHERE skip irrelevant partitions
+    (partition pruning).
+  - Index sizes are smaller per partition.
+  - Archiving old partitions by detaching them is instant.
+
+KEYWORDS : partitioning, range, list, hash, partition pruning, time-series
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : SQL-015
+TOPIC    : Replication
+DIFFICULTY: Advanced
+--------------------------------------------------------------------------------
+QUESTION :
+What is database replication and what are the main replication strategies?
+
+ANSWER :
+Replication is the process of copying data from a primary (master) database
+to one or more replica (slave) databases to improve availability and read
+performance.
+
+  PRIMARY-REPLICA (Master-Slave):
+  - Writes go to primary; replicated asynchronously (or synchronously) to replicas.
+  - Replicas serve read traffic, reducing load on primary.
+  - If primary fails, a replica can be promoted.
+
+  SYNCHRONOUS REPLICATION:
+  - Write is confirmed only after all replicas acknowledge it.
+  - Zero data loss, but higher write latency.
+
+  ASYNCHRONOUS REPLICATION:
+  - Write is confirmed as soon as primary persists it.
+  - Lower latency, but risk of data loss if primary fails before replication.
+
+  MULTI-PRIMARY (Multi-Master):
+  - Multiple nodes accept writes. Requires conflict resolution.
+  - Useful for geographically distributed writes.
+
+  USE CASES:
+  - Read scaling: add read replicas, direct SELECT queries to replicas.
+  - High availability: automatic failover to a replica.
+  - Disaster recovery: off-site replica in a different region.
+
+  Tools: PostgreSQL streaming replication, MySQL Group Replication, AWS RDS
+  Multi-AZ, Vitess (MySQL sharding + replication at scale).
+
+KEYWORDS : replication, primary, replica, synchronous, asynchronous, failover, HA
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : SQL-016
+TOPIC    : Sharding
+DIFFICULTY: Advanced
+--------------------------------------------------------------------------------
+QUESTION :
+What is database sharding and what are the trade-offs?
+
+ANSWER :
+Sharding is horizontal partitioning of data across multiple database servers
+(shards). Each shard holds a subset of the data. Together they form the
+complete dataset.
+
+  SHARD KEY STRATEGIES:
+  - Range-based: users A–M → shard 1, N–Z → shard 2. Simple but uneven.
+  - Hash-based:  shard = hash(user_id) % num_shards. Even distribution but
+                 hard to add shards (requires resharding).
+  - Directory-based: a lookup service maps each key to a shard.
+
+  BENEFITS:
+  + Massive horizontal scalability (write throughput, storage).
+  + Each shard is a smaller, faster database.
+
+  TRADE-OFFS:
+  - Cross-shard JOINs are extremely expensive or impossible.
+  - Distributed transactions across shards break ACID guarantees.
+  - Resharding is operationally complex.
+  - Application complexity increases (must route queries to correct shard).
+  - Hotspots if shard key is poorly chosen.
+
+  ALTERNATIVES before sharding:
+  1. Add read replicas.
+  2. Add caching (Redis).
+  3. Upgrade hardware (vertical scaling).
+  4. Partition large tables.
+  Only shard when these are exhausted.
+
+KEYWORDS : sharding, shard key, horizontal scaling, resharding, hotspot, trade-off
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : SQL-017
+TOPIC    : Locking
+DIFFICULTY: Advanced
+--------------------------------------------------------------------------------
+QUESTION :
+What is the difference between optimistic and pessimistic locking?
+
+ANSWER :
+Both strategies prevent conflicting concurrent updates, but they differ in
+when and how the lock is acquired.
+
+  PESSIMISTIC LOCKING:
+  - Acquire an exclusive lock before reading the record.
+  - Other transactions must wait until the lock is released.
+  - Best when conflicts are frequent or update windows are long.
+
+  -- PostgreSQL: SELECT ... FOR UPDATE
+  BEGIN;
+  SELECT * FROM tickets WHERE id = 1 FOR UPDATE;   -- lock acquired
+  UPDATE tickets SET status = 'booked' WHERE id = 1;
+  COMMIT;
+
+  OPTIMISTIC LOCKING:
+  - No lock on read. Add a version column (integer or timestamp).
+  - On update, check that version hasn't changed since read.
+  - If version mismatch, abort and retry.
+  - Best when conflicts are rare (high read, low contention).
+
+  -- Schema
+  ALTER TABLE products ADD COLUMN version INT DEFAULT 1;
+
+  -- Application logic (e.g., in Python)
+  product = db.query("SELECT * FROM products WHERE id = %s", [id])
+  # ... user edits ...
+  rows_affected = db.execute(
+      "UPDATE products SET price=%s, version=version+1 "
+      "WHERE id=%s AND version=%s",
+      [new_price, id, product.version]
+  )
+  if rows_affected == 0:
+      raise ConflictError("Record was updated by another transaction.")
+
+KEYWORDS : optimistic locking, pessimistic locking, version, SELECT FOR UPDATE, conflict
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : SQL-018
+TOPIC    : Full-Text Search
+DIFFICULTY: Advanced
+--------------------------------------------------------------------------------
+QUESTION :
+How do you implement full-text search in PostgreSQL?
+
+ANSWER :
+PostgreSQL has built-in full-text search using tsvector (document) and
+tsquery (query) types, with GIN/GiST indexes for speed.
+
+  -- Create a tsvector column for fast search
+  ALTER TABLE articles ADD COLUMN search_vector TSVECTOR;
+
+  UPDATE articles
+  SET search_vector = to_tsvector('english', title || ' ' || content);
+
+  -- GIN index for fast lookups
+  CREATE INDEX idx_articles_search ON articles USING GIN(search_vector);
+
+  -- Search query
+  SELECT title, ts_rank(search_vector, query) AS rank
+  FROM articles, to_tsquery('english', 'python & interview') query
+  WHERE search_vector @@ query
+  ORDER BY rank DESC;
+
+  -- Automatic update via trigger
+  CREATE FUNCTION update_search_vector() RETURNS trigger AS $$
+  BEGIN
+      NEW.search_vector :=
+          to_tsvector('english', NEW.title || ' ' || NEW.content);
+      RETURN NEW;
+  END;
+  $$ LANGUAGE plpgsql;
+
+  CREATE TRIGGER articles_search_trigger
+  BEFORE INSERT OR UPDATE ON articles
+  FOR EACH ROW EXECUTE FUNCTION update_search_vector();
+
+  For more complex needs (fuzzy search, synonyms, multi-language) use
+  Elasticsearch or OpenSearch as a dedicated search engine.
+
+KEYWORDS : full-text search, tsvector, tsquery, GIN, to_tsquery, ts_rank
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : SQL-019
+TOPIC    : Views & Materialised Views
+DIFFICULTY: Advanced
+--------------------------------------------------------------------------------
+QUESTION :
+What is a view in SQL? How does a materialised view differ from a regular view?
+
+ANSWER :
+  VIEW — A stored SQL query that looks like a table. Each time it is queried,
+         the underlying SQL executes. No data is physically stored.
+
+    CREATE VIEW active_customers AS
+    SELECT id, name, email
+    FROM customers
+    WHERE is_active = TRUE;
+
+    SELECT * FROM active_customers;    -- executes the underlying query
+
+  Benefits: simplifies complex queries, provides a security layer (expose
+  only certain columns), centralises business logic.
+
+  Limitations: cannot be indexed; may be slow for complex aggregations
+  called frequently.
+
+  MATERIALISED VIEW — Stores the result set physically on disk.
+                      Must be refreshed when underlying data changes.
+
+    CREATE MATERIALIZED VIEW monthly_revenue AS
+    SELECT
+        DATE_TRUNC('month', created) AS month,
+        SUM(amount) AS revenue
+    FROM orders
+    WHERE status = 'completed'
+    GROUP BY 1;
+
+    -- Refresh (re-runs the query, updates stored data)
+    REFRESH MATERIALIZED VIEW monthly_revenue;
+    -- Concurrent refresh (no read lock)
+    REFRESH MATERIALIZED VIEW CONCURRENTLY monthly_revenue;
+
+  Materialised views can be indexed. Ideal for expensive aggregations queried
+  frequently on data that doesn't change per second.
+
+KEYWORDS : view, materialised view, REFRESH, index, stored query, aggregation
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : SQL-020
+TOPIC    : Performance — EXPLAIN
+DIFFICULTY: Advanced
+--------------------------------------------------------------------------------
+QUESTION :
+How do you interpret the output of EXPLAIN ANALYZE in PostgreSQL?
+
+ANSWER :
+EXPLAIN ANALYZE runs the query and reports the execution plan with actual
+timing, row counts, and operations.
+
+  EXPLAIN (ANALYZE, BUFFERS, FORMAT TEXT)
+  SELECT c.name, COUNT(o.id) AS order_count
+  FROM customers c
+  JOIN orders o ON c.id = o.customer_id
+  GROUP BY c.name
+  HAVING COUNT(o.id) > 10;
+
+  KEY NODES TO UNDERSTAND:
+
+  Seq Scan   — Full table scan. Fine for small tables. Add index if rows >> 1000.
+  Index Scan — Uses an index. Fast for selective queries.
+  Bitmap Heap Scan — Combines multiple index scans; good for medium selectivity.
+  Hash Join  — Builds a hash table from smaller relation, probes with larger.
+  Nested Loop — For each row in outer, scan inner. Fast if inner is indexed.
+  Sort       — Explicit sort. Indicates missing index for ORDER BY column.
+  Hash Aggregate — Used for GROUP BY when fitting in memory.
+
+  KEY METRICS:
+  - cost=0.00..143.22  : estimated startup..total cost (arbitrary planner units)
+  - rows=1200          : estimated rows returned
+  - actual time=0.0..5.3 ms  : measured time
+  - actual rows=1174   : measured rows (compare to estimate — big gaps = stale stats)
+  - Buffers: hit=82    : pages read from cache (hit) vs disk (read)
+
+  HIGH IMPACT FIXES:
+  - Seq Scan on large table → add an index
+  - Large gap between estimated and actual rows → run ANALYZE to update stats
+  - Sort on non-indexed column in ORDER BY → add index
+
+KEYWORDS : EXPLAIN ANALYZE, Seq Scan, Index Scan, cost, actual rows, Buffers, ANALYZE
+
+================================================================================
+END OF FILE — SQL_Interview_QA.txt — 20 Questions
+================================================================================

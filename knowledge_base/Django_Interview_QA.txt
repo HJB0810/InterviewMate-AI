@@ -1,0 +1,945 @@
+================================================================================
+FILE      : Django_Interview_QA.txt
+SUBJECT   : Django Web Framework — Interview Questions & Answers
+QUESTIONS : 20
+LEVELS    : Beginner (7) | Intermediate (8) | Advanced (5)
+PROJECT   : InterviewMate AI — IBM SkillsBuild AICTE-2026
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : DJ-001
+TOPIC    : Django Architecture
+DIFFICULTY: Beginner
+--------------------------------------------------------------------------------
+QUESTION :
+Explain the MTV (Model-Template-View) architecture of Django. How is it
+different from MVC?
+
+ANSWER :
+Django follows the MTV pattern:
+
+  MODEL     — Defines the data structure and handles database interaction.
+              (maps to the 'M' in MVC)
+  TEMPLATE  — Handles presentation / HTML rendering.
+              (maps to the 'V' in MVC — what the user sees)
+  VIEW      — Contains business logic; receives requests and returns responses.
+              (maps to the 'C' in MVC — the controller)
+
+  Request → URL dispatcher → View → Model (data) + Template (render) → Response
+
+In classical MVC, the Controller handles routing and logic. In Django, the URL
+dispatcher plays the routing role, and the View combines controller logic.
+Django's "View" is really a controller, and its "Template" is the view.
+
+The Django documentation itself uses the term MTV to avoid confusion with
+the classical MVC naming.
+
+KEYWORDS : MTV, MVC, model, template, view, URL dispatcher, request/response
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : DJ-002
+TOPIC    : Models & ORM
+DIFFICULTY: Beginner
+--------------------------------------------------------------------------------
+QUESTION :
+What is Django's ORM? How do you define a model and perform basic CRUD
+operations?
+
+ANSWER :
+Django's ORM (Object-Relational Mapper) lets you interact with the database
+using Python objects instead of raw SQL. Each model class maps to a database
+table; each attribute maps to a column.
+
+  # models.py
+  from django.db import models
+
+  class Article(models.Model):
+      title   = models.CharField(max_length=200)
+      content = models.TextField()
+      created = models.DateTimeField(auto_now_add=True)
+      published = models.BooleanField(default=False)
+
+      class Meta:
+          ordering = ["-created"]
+
+      def __str__(self):
+          return self.title
+
+  # CRUD via the QuerySet API
+  # CREATE
+  article = Article.objects.create(title="Django ORM", content="...")
+
+  # READ
+  all_articles    = Article.objects.all()
+  published       = Article.objects.filter(published=True)
+  single          = Article.objects.get(pk=1)      # raises if not found
+
+  # UPDATE
+  article.title = "Updated Title"
+  article.save()
+  Article.objects.filter(published=False).update(published=True)  # bulk
+
+  # DELETE
+  article.delete()
+  Article.objects.filter(published=False).delete()   # bulk
+
+KEYWORDS : ORM, QuerySet, model, CRUD, filter, get, create, save, delete
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : DJ-003
+TOPIC    : Migrations
+DIFFICULTY: Beginner
+--------------------------------------------------------------------------------
+QUESTION :
+What are Django migrations and why are they important?
+
+ANSWER :
+Migrations are Django's way of propagating changes to your models (adding a
+field, creating a table, etc.) into the database schema. They keep the
+database schema in sync with your Python model definitions.
+
+  Workflow:
+  1. Change your model (add/remove/alter a field).
+  2. python manage.py makemigrations — creates a migration file in migrations/
+  3. python manage.py migrate       — applies pending migrations to the DB
+
+  # Example migration file (auto-generated)
+  from django.db import migrations, models
+
+  class Migration(migrations.Migration):
+      dependencies = [("blog", "0001_initial")]
+      operations = [
+          migrations.AddField(
+              model_name="article",
+              name="author",
+              field=models.CharField(max_length=100, default="Anonymous"),
+          ),
+      ]
+
+  Key commands:
+    migrate --plan       — preview which migrations will run
+    showmigrations       — list all migrations and their status
+    sqlmigrate app 0002  — show the SQL for a specific migration
+
+  Never edit migration files manually unless you know exactly what you are
+  doing. Squash old migrations periodically to keep the history clean.
+
+KEYWORDS : migration, makemigrations, migrate, schema, squash, dependencies
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : DJ-004
+TOPIC    : URL Routing
+DIFFICULTY: Beginner
+--------------------------------------------------------------------------------
+QUESTION :
+How does URL routing work in Django? What is the difference between path()
+and re_path()?
+
+ANSWER :
+Django's URL dispatcher matches incoming request paths against a list of URL
+patterns defined in urls.py and calls the corresponding view.
+
+  # project/urls.py
+  from django.urls import path, include
+
+  urlpatterns = [
+      path("admin/", admin.site.urls),
+      path("blog/", include("blog.urls")),   # delegate to app-level urls
+  ]
+
+  # blog/urls.py
+  from django.urls import path, re_path
+  from . import views
+
+  urlpatterns = [
+      path("",                 views.article_list,   name="article-list"),
+      path("<int:pk>/",        views.article_detail, name="article-detail"),
+      path("<slug:slug>/",     views.article_by_slug,name="article-slug"),
+
+      # re_path uses a regex — use when path converters are insufficient
+      re_path(r"^archive/(?P<year>[0-9]{4})/$", views.archive, name="archive"),
+  ]
+
+  Path converters: int, str, slug, uuid, path
+  Named URLs allow reverse resolution: reverse("article-detail", kwargs={"pk": 1})
+
+KEYWORDS : url, path, re_path, URLconf, include, reverse, named URL, converter
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : DJ-005
+TOPIC    : Views
+DIFFICULTY: Beginner
+--------------------------------------------------------------------------------
+QUESTION :
+What is the difference between function-based views (FBVs) and class-based
+views (CBVs) in Django?
+
+ANSWER :
+  FBV — Simple Python functions that take a request and return a response.
+        Easy to understand, explicit, fine for simple cases.
+
+  from django.shortcuts import render, get_object_or_404
+
+  def article_detail(request, pk):
+      article = get_object_or_404(Article, pk=pk)
+      return render(request, "blog/detail.html", {"article": article})
+
+  CBV — Python classes that inherit from Django's generic view classes.
+        Provide built-in CRUD views (ListView, DetailView, CreateView, etc.)
+        reducing boilerplate for standard patterns.
+
+  from django.views.generic import DetailView
+
+  class ArticleDetailView(DetailView):
+      model = Article
+      template_name = "blog/detail.html"
+      context_object_name = "article"
+
+  # urls.py
+  path("<int:pk>/", ArticleDetailView.as_view(), name="article-detail")
+
+  Choose FBV for complex, non-standard logic. Choose CBV for standard CRUD
+  patterns where the built-in generics provide a good fit. Mixins allow
+  composing CBV behaviours (LoginRequiredMixin, PermissionRequiredMixin).
+
+KEYWORDS : FBV, CBV, generic view, ListView, DetailView, mixin, as_view
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : DJ-006
+TOPIC    : Templates & Context
+DIFFICULTY: Beginner
+--------------------------------------------------------------------------------
+QUESTION :
+How does Django's template engine work? What are template tags and filters?
+
+ANSWER :
+Django templates are HTML files with special syntax processed by the template
+engine before being sent to the browser.
+
+  VARIABLE RENDERING  : {{ article.title }}
+  TEMPLATE TAGS       : {% tag %} — logic (loops, conditions, blocks)
+  FILTERS             : {{ value|filter }} — transform display values
+
+  <!-- Example template: blog/detail.html -->
+  {% extends "base.html" %}
+
+  {% block content %}
+    <h1>{{ article.title }}</h1>
+    <p>By {{ article.author|default:"Anonymous" }}</p>
+    <p>Published: {{ article.created|date:"d M Y" }}</p>
+
+    {% if article.published %}
+      <span class="badge">Live</span>
+    {% else %}
+      <span class="badge">Draft</span>
+    {% endif %}
+
+    {% for tag in article.tags.all %}
+      <span>{{ tag.name|upper }}</span>
+    {% empty %}
+      <span>No tags</span>
+    {% endfor %}
+  {% endblock %}
+
+  Template inheritance ({% extends %} / {% block %}) avoids repeating HTML
+  across pages. {% include %} reuses a partial template.
+
+KEYWORDS : template, context, tag, filter, extends, block, include, DTL
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : DJ-007
+TOPIC    : Forms
+DIFFICULTY: Beginner
+--------------------------------------------------------------------------------
+QUESTION :
+How do Django Forms work? What is the difference between forms.Form and
+forms.ModelForm?
+
+ANSWER :
+Django Forms handle HTML form rendering, input validation, and cleaned data
+extraction.
+
+  forms.Form — manually define every field. Used for non-model data.
+
+  from django import forms
+
+  class ContactForm(forms.Form):
+      name    = forms.CharField(max_length=100)
+      email   = forms.EmailField()
+      message = forms.CharField(widget=forms.Textarea)
+
+  forms.ModelForm — automatically generates fields from a Model.
+                    Saves directly to the database.
+
+  class ArticleForm(forms.ModelForm):
+      class Meta:
+          model  = Article
+          fields = ["title", "content", "published"]
+
+  # View usage
+  def create_article(request):
+      if request.method == "POST":
+          form = ArticleForm(request.POST)
+          if form.is_valid():
+              form.save()
+              return redirect("article-list")
+      else:
+          form = ArticleForm()
+      return render(request, "blog/create.html", {"form": form})
+
+  Custom validation: override clean_<fieldname>() or clean() on the form.
+
+KEYWORDS : Form, ModelForm, is_valid, cleaned_data, validation, widget, CSRF
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : DJ-008
+TOPIC    : Django REST Framework
+DIFFICULTY: Intermediate
+--------------------------------------------------------------------------------
+QUESTION :
+What is Django REST Framework (DRF)? Explain the role of Serializers.
+
+ANSWER :
+DRF is a third-party toolkit for building Web APIs on top of Django. It
+provides serializers, authentication, permissions, viewsets, and routers.
+
+  A SERIALIZER converts between complex Python objects (Django model instances,
+  QuerySets) and Python primitives that can be rendered as JSON/XML.
+
+  # serializers.py
+  from rest_framework import serializers
+  from .models import Article
+
+  class ArticleSerializer(serializers.ModelSerializer):
+      class Meta:
+          model  = Article
+          fields = ["id", "title", "content", "published", "created"]
+          read_only_fields = ["id", "created"]
+
+      def validate_title(self, value):
+          if len(value) < 5:
+              raise serializers.ValidationError("Title too short.")
+          return value
+
+  # views.py (APIView approach)
+  from rest_framework.views import APIView
+  from rest_framework.response import Response
+  from rest_framework import status
+
+  class ArticleListAPIView(APIView):
+      def get(self, request):
+          articles = Article.objects.filter(published=True)
+          serializer = ArticleSerializer(articles, many=True)
+          return Response(serializer.data)
+
+      def post(self, request):
+          serializer = ArticleSerializer(data=request.data)
+          if serializer.is_valid():
+              serializer.save()
+              return Response(serializer.data, status=status.HTTP_201_CREATED)
+          return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+KEYWORDS : DRF, serializer, ModelSerializer, APIView, Response, validation
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : DJ-009
+TOPIC    : Authentication & Permissions
+DIFFICULTY: Intermediate
+--------------------------------------------------------------------------------
+QUESTION :
+How does authentication work in Django and Django REST Framework? Describe
+session-based vs token-based authentication.
+
+ANSWER :
+  SESSION-BASED (Django default):
+  1. User submits credentials via login form.
+  2. Django validates and creates a session in the database.
+  3. Browser stores a session ID cookie.
+  4. Each subsequent request sends the cookie; Django retrieves the session.
+
+  Suitable for browser-based web apps where server manages state.
+
+  TOKEN-BASED (DRF TokenAuthentication / JWT):
+  1. Client sends credentials; server returns a token.
+  2. Client stores the token (localStorage or cookie).
+  3. Each request includes: Authorization: Token <token>
+  4. Server validates the token on each request (stateless).
+
+  # DRF token authentication setup
+  # settings.py
+  REST_FRAMEWORK = {
+      "DEFAULT_AUTHENTICATION_CLASSES": [
+          "rest_framework.authentication.TokenAuthentication",
+      ],
+      "DEFAULT_PERMISSION_CLASSES": [
+          "rest_framework.permissions.IsAuthenticated",
+      ],
+  }
+
+  # Protect a view
+  from rest_framework.permissions import IsAuthenticated
+  class PrivateView(APIView):
+      permission_classes = [IsAuthenticated]
+      def get(self, request):
+          return Response({"user": request.user.username})
+
+  JWT (djangorestframework-simplejwt) is preferred for SPAs and mobile apps
+  because tokens are self-contained and require no server-side session storage.
+
+KEYWORDS : authentication, session, token, JWT, permission, IsAuthenticated, stateless
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : DJ-010
+TOPIC    : ViewSets & Routers
+DIFFICULTY: Intermediate
+--------------------------------------------------------------------------------
+QUESTION :
+What are ViewSets and Routers in DRF, and how do they reduce boilerplate?
+
+ANSWER :
+A ViewSet groups related view logic for a resource into a single class.
+A Router auto-generates URL patterns from a ViewSet.
+
+  # views.py
+  from rest_framework import viewsets, permissions
+  from .models import Article
+  from .serializers import ArticleSerializer
+
+  class ArticleViewSet(viewsets.ModelViewSet):
+      queryset           = Article.objects.all()
+      serializer_class   = ArticleSerializer
+      permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+
+      def get_queryset(self):
+          # Custom filtering: ?published=true
+          qs = super().get_queryset()
+          if self.request.query_params.get("published"):
+              qs = qs.filter(published=True)
+          return qs
+
+  # urls.py
+  from rest_framework.routers import DefaultRouter
+  from .views import ArticleViewSet
+
+  router = DefaultRouter()
+  router.register("articles", ArticleViewSet, basename="article")
+  urlpatterns = router.urls
+
+  ModelViewSet auto-generates:
+    GET    /articles/       → list
+    POST   /articles/       → create
+    GET    /articles/{pk}/  → retrieve
+    PUT    /articles/{pk}/  → update
+    PATCH  /articles/{pk}/  → partial_update
+    DELETE /articles/{pk}/  → destroy
+
+KEYWORDS : ViewSet, ModelViewSet, Router, DefaultRouter, CRUD, basename
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : DJ-011
+TOPIC    : QuerySet Optimisation
+DIFFICULTY: Intermediate
+--------------------------------------------------------------------------------
+QUESTION :
+What is the N+1 query problem in Django and how do you solve it?
+
+ANSWER :
+The N+1 problem occurs when you fetch N objects and then make 1 additional
+query per object to retrieve related data — N+1 database queries total.
+
+  # PROBLEM — N+1 queries
+  articles = Article.objects.all()   # 1 query
+  for article in articles:
+      print(article.author.name)     # 1 extra query PER article → N+1 total
+
+  # SOLUTION 1: select_related (SQL JOIN, for ForeignKey / OneToOne)
+  articles = Article.objects.select_related("author").all()
+  # 1 single SQL JOIN query — author data fetched upfront
+
+  # SOLUTION 2: prefetch_related (separate query + Python join,
+  #             for ManyToMany / reverse ForeignKey)
+  articles = Article.objects.prefetch_related("tags").all()
+  # 2 queries total regardless of number of articles
+
+  # Combining both
+  articles = (
+      Article.objects
+      .select_related("author")
+      .prefetch_related("tags", "comments")
+      .filter(published=True)
+  )
+
+  Use Django Debug Toolbar to inspect query counts during development.
+  only() and defer() further limit which columns are fetched.
+
+KEYWORDS : N+1, select_related, prefetch_related, JOIN, QuerySet, optimisation
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : DJ-012
+TOPIC    : Signals
+DIFFICULTY: Intermediate
+--------------------------------------------------------------------------------
+QUESTION :
+What are Django signals, and when should (and should not) you use them?
+
+ANSWER :
+Signals allow decoupled components to react to events. When a sender (e.g.,
+a model save) fires a signal, all registered receivers are called.
+
+  from django.db.models.signals import post_save
+  from django.dispatch import receiver
+  from django.contrib.auth.models import User
+  from .models import UserProfile
+
+  @receiver(post_save, sender=User)
+  def create_user_profile(sender, instance, created, **kwargs):
+      if created:
+          UserProfile.objects.create(user=instance)
+
+  @receiver(post_save, sender=User)
+  def save_user_profile(sender, instance, **kwargs):
+      instance.userprofile.save()
+
+  Common built-in signals:
+    pre_save / post_save   — before/after model.save()
+    pre_delete / post_delete
+    m2m_changed            — ManyToMany changes
+    request_started / request_finished
+
+  When TO use: auto-creating related records, invalidating caches on save,
+  sending notifications on model events.
+
+  When NOT to use: complex business logic (hard to test and trace), chaining
+  signals across apps (creates hidden coupling). Prefer explicit service
+  functions for complex workflows.
+
+KEYWORDS : signals, post_save, receiver, pre_save, sender, decoupled, coupling
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : DJ-013
+TOPIC    : Middleware
+DIFFICULTY: Intermediate
+--------------------------------------------------------------------------------
+QUESTION :
+What is Django middleware, and how do you write a custom one?
+
+ANSWER :
+Middleware is a hook framework of processing layers that wraps Django's request/
+response cycle. Each middleware component can process a request before it
+reaches the view or a response before it reaches the client.
+
+  Built-in examples: SecurityMiddleware, SessionMiddleware, CsrfViewMiddleware,
+                     AuthenticationMiddleware, MessageMiddleware
+
+  # Custom middleware: log request duration
+  import time
+  import logging
+
+  logger = logging.getLogger(__name__)
+
+  class RequestTimingMiddleware:
+      def __init__(self, get_response):
+          self.get_response = get_response   # next middleware or view
+
+      def __call__(self, request):
+          start = time.perf_counter()
+          response = self.get_response(request)    # call the view
+          duration = time.perf_counter() - start
+          logger.info(f"{request.method} {request.path} — {duration*1000:.1f}ms")
+          return response
+
+  # settings.py
+  MIDDLEWARE = [
+      "django.middleware.security.SecurityMiddleware",
+      "myapp.middleware.RequestTimingMiddleware",   # add here
+      ...
+  ]
+
+  Middleware order matters: request processing is top-to-bottom; response
+  processing is bottom-to-top.
+
+KEYWORDS : middleware, get_response, request, response, hook, CSRF, session
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : DJ-014
+TOPIC    : Caching
+DIFFICULTY: Intermediate
+--------------------------------------------------------------------------------
+QUESTION :
+How does caching work in Django? Describe the different cache levels and
+backends.
+
+ANSWER :
+Django provides a caching framework with multiple granularity levels:
+
+  PER-SITE caching — cache every page (middleware-level).
+  PER-VIEW caching — cache the output of specific views.
+  PER-OBJECT caching — cache arbitrary data manually.
+
+  # settings.py — configure backend
+  CACHES = {
+      "default": {
+          "BACKEND": "django.core.cache.backends.redis.RedisCache",
+          "LOCATION": "redis://127.0.0.1:6379/1",
+      }
+  }
+
+  # Per-view caching
+  from django.views.decorators.cache import cache_page
+
+  @cache_page(60 * 15)   # cache for 15 minutes
+  def article_list(request):
+      ...
+
+  # Low-level API (most flexible)
+  from django.core.cache import cache
+
+  def get_popular_articles():
+      key = "popular_articles"
+      result = cache.get(key)
+      if result is None:
+          result = Article.objects.filter(published=True).order_by("-views")[:10]
+          cache.set(key, result, timeout=300)
+      return result
+
+  # Invalidate
+  cache.delete("popular_articles")
+
+  Backends: LocMemCache (development), FileBasedCache, MemcachedCache,
+            RedisCache (production recommended).
+
+KEYWORDS : cache, Redis, Memcached, cache_page, cache.get, cache.set, invalidation
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : DJ-015
+TOPIC    : Custom Management Commands
+DIFFICULTY: Intermediate
+--------------------------------------------------------------------------------
+QUESTION :
+How do you create a custom Django management command?
+
+ANSWER :
+Custom management commands allow you to run scripts via:
+  python manage.py <command_name>
+
+  Directory structure:
+    myapp/
+      management/
+          __init__.py
+          commands/
+              __init__.py
+              seed_articles.py
+
+  # seed_articles.py
+  from django.core.management.base import BaseCommand
+  from blog.models import Article
+
+  class Command(BaseCommand):
+      help = "Seeds the database with sample articles"
+
+      def add_arguments(self, parser):
+          parser.add_argument("--count", type=int, default=10,
+                              help="Number of articles to create")
+
+      def handle(self, *args, **options):
+          count = options["count"]
+          for i in range(count):
+              Article.objects.create(
+                  title=f"Sample Article {i+1}",
+                  content="Lorem ipsum dolor sit amet.",
+                  published=True,
+              )
+          self.stdout.write(
+              self.style.SUCCESS(f"Created {count} articles.")
+          )
+
+  Usage:
+    python manage.py seed_articles --count 50
+
+KEYWORDS : management command, BaseCommand, handle, add_arguments, stdout
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : DJ-016
+TOPIC    : Security
+DIFFICULTY: Advanced
+--------------------------------------------------------------------------------
+QUESTION :
+What security measures does Django provide out of the box, and what additional
+steps should a developer take?
+
+ANSWER :
+BUILT-IN PROTECTIONS:
+  - CSRF protection: CsrfViewMiddleware adds a token to forms.
+  - XSS protection: Template engine auto-escapes variables.
+  - SQL injection: ORM uses parameterised queries by default.
+  - Clickjacking: X-Frame-Options header via XFrameOptionsMiddleware.
+  - HTTPS enforcement: SECURE_SSL_REDIRECT = True
+  - Secure cookies: SESSION_COOKIE_SECURE = True, CSRF_COOKIE_SECURE = True
+
+ADDITIONAL STEPS:
+  1. Keep SECRET_KEY secret — use environment variables.
+  2. Set DEBUG = False in production.
+  3. Use ALLOWED_HOSTS to whitelist domains.
+  4. Enable HSTS: SECURE_HSTS_SECONDS = 31536000
+  5. Set Content Security Policy headers (django-csp package).
+  6. Rate-limit authentication endpoints (django-ratelimit).
+  7. Keep Django and dependencies updated.
+  8. Run: python manage.py check --deploy to audit security settings.
+
+  # Example secure production settings snippet
+  SECRET_KEY     = os.environ["SECRET_KEY"]
+  DEBUG          = False
+  ALLOWED_HOSTS  = ["example.com"]
+  SECURE_SSL_REDIRECT            = True
+  SESSION_COOKIE_SECURE          = True
+  CSRF_COOKIE_SECURE             = True
+  SECURE_HSTS_SECONDS            = 31536000
+  SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+
+KEYWORDS : CSRF, XSS, SQL injection, HSTS, SECRET_KEY, security check, CSP
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : DJ-017
+TOPIC    : Custom User Model
+DIFFICULTY: Advanced
+--------------------------------------------------------------------------------
+QUESTION :
+Why and how do you create a custom user model in Django?
+
+ANSWER :
+Django's built-in User model uses username as the login identifier. Most
+modern apps prefer email login or need additional fields. It is strongly
+recommended to set up a custom user model at the START of a project because
+changing it later requires complex migrations.
+
+  # accounts/models.py
+  from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
+  from django.db import models
+
+  class UserManager(BaseUserManager):
+      def create_user(self, email, password=None, **extra_fields):
+          if not email:
+              raise ValueError("Email is required.")
+          email = self.normalize_email(email)
+          user = self.model(email=email, **extra_fields)
+          user.set_password(password)
+          user.save(using=self._db)
+          return user
+
+      def create_superuser(self, email, password, **extra_fields):
+          extra_fields.setdefault("is_staff", True)
+          extra_fields.setdefault("is_superuser", True)
+          return self.create_user(email, password, **extra_fields)
+
+  class CustomUser(AbstractBaseUser, PermissionsMixin):
+      email      = models.EmailField(unique=True)
+      full_name  = models.CharField(max_length=150)
+      is_active  = models.BooleanField(default=True)
+      is_staff   = models.BooleanField(default=False)
+
+      objects        = UserManager()
+      USERNAME_FIELD  = "email"
+      REQUIRED_FIELDS = ["full_name"]
+
+  # settings.py
+  AUTH_USER_MODEL = "accounts.CustomUser"
+
+KEYWORDS : AbstractBaseUser, BaseUserManager, AUTH_USER_MODEL, PermissionsMixin
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : DJ-018
+TOPIC    : Celery & Async Tasks
+DIFFICULTY: Advanced
+--------------------------------------------------------------------------------
+QUESTION :
+How do you run background tasks in Django using Celery? When would you use it?
+
+ANSWER :
+Celery is a distributed task queue that runs time-consuming tasks asynchronously
+outside the HTTP request/response cycle.
+
+  USE CASES: sending emails, generating reports, processing uploads,
+             calling external APIs, scheduled periodic tasks.
+
+  # Setup
+  # pip install celery redis
+
+  # myproject/celery.py
+  import os
+  from celery import Celery
+
+  os.environ.setdefault("DJANGO_SETTINGS_MODULE", "myproject.settings")
+  app = Celery("myproject")
+  app.config_from_object("django.conf:settings", namespace="CELERY")
+  app.autodiscover_tasks()
+
+  # settings.py
+  CELERY_BROKER_URL    = "redis://localhost:6379/0"
+  CELERY_RESULT_BACKEND = "redis://localhost:6379/0"
+
+  # myapp/tasks.py
+  from celery import shared_task
+  from django.core.mail import send_mail
+
+  @shared_task
+  def send_welcome_email(user_id):
+      from django.contrib.auth import get_user_model
+      User = get_user_model()
+      user = User.objects.get(pk=user_id)
+      send_mail(
+          subject="Welcome!",
+          message=f"Hi {user.full_name}, welcome to InterviewMate AI.",
+          from_email="no-reply@example.com",
+          recipient_list=[user.email],
+      )
+
+  # Calling the task from a view (fires asynchronously)
+  send_welcome_email.delay(user.pk)
+
+  Run worker: celery -A myproject worker -l info
+  Periodic tasks: use celery beat + django-celery-beat
+
+KEYWORDS : Celery, Redis, broker, worker, shared_task, delay, async, beat
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : DJ-019
+TOPIC    : Testing in Django
+DIFFICULTY: Advanced
+--------------------------------------------------------------------------------
+QUESTION :
+How do you write tests for Django views and models using Django's test client
+and pytest-django?
+
+ANSWER :
+Django provides TestCase (inherits from unittest.TestCase) and a test Client
+that simulates HTTP requests without running a real server.
+
+  # tests/test_views.py
+  from django.test import TestCase, Client
+  from django.urls import reverse
+  from django.contrib.auth import get_user_model
+  from blog.models import Article
+
+  User = get_user_model()
+
+  class ArticleViewTests(TestCase):
+      def setUp(self):
+          self.client = Client()
+          self.user   = User.objects.create_user(
+              email="test@example.com", password="pass123"
+          )
+          self.article = Article.objects.create(
+              title="Test Article", content="Content here", published=True
+          )
+
+      def test_article_list_returns_200(self):
+          url  = reverse("article-list")
+          resp = self.client.get(url)
+          self.assertEqual(resp.status_code, 200)
+          self.assertContains(resp, "Test Article")
+
+      def test_create_article_requires_login(self):
+          url  = reverse("article-create")
+          resp = self.client.post(url, {"title": "New", "content": "..."})
+          self.assertEqual(resp.status_code, 302)   # redirect to login
+
+      def test_authenticated_create(self):
+          self.client.force_login(self.user)
+          url  = reverse("article-create")
+          resp = self.client.post(url, {"title": "New Art", "content": "...",
+                                        "published": True})
+          self.assertEqual(Article.objects.count(), 2)
+
+  Run: python manage.py test  |  or: pytest --ds=myproject.settings
+
+KEYWORDS : TestCase, Client, setUp, assertContains, force_login, pytest-django
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : DJ-020
+TOPIC    : Deployment
+DIFFICULTY: Advanced
+--------------------------------------------------------------------------------
+QUESTION :
+What are the key steps to deploy a Django application to production?
+
+ANSWER :
+  1. SET PRODUCTION SETTINGS
+     - DEBUG = False
+     - ALLOWED_HOSTS = ["yourdomain.com"]
+     - SECRET_KEY from environment variable (python-decouple or os.environ)
+
+  2. COLLECT STATIC FILES
+     python manage.py collectstatic
+     Serve via WhiteNoise (simple) or a CDN/Nginx (production).
+
+  3. DATABASE
+     Use PostgreSQL (not SQLite). Configure via DATABASE_URL environment
+     variable using dj-database-url.
+
+  4. WSGI / ASGI SERVER
+     Use Gunicorn (WSGI) or Uvicorn + Gunicorn (ASGI for async views).
+     gunicorn myproject.wsgi:application --workers 4
+
+  5. REVERSE PROXY
+     Nginx sits in front of Gunicorn: handles SSL termination, static files,
+     compression, and rate limiting.
+
+  6. PROCESS MANAGEMENT
+     Use systemd or Supervisor to keep Gunicorn running.
+
+  7. SSL CERTIFICATE
+     Let's Encrypt via Certbot (free) or a commercial certificate.
+
+  8. ENVIRONMENT VARIABLES
+     Store secrets (SECRET_KEY, DB password, API keys) in .env and never
+     commit them. Use python-decouple or django-environ.
+
+  9. LOGGING & MONITORING
+     Configure LOGGING in settings.py. Use Sentry for error tracking.
+
+  10. MIGRATIONS
+      Run python manage.py migrate as part of the deployment pipeline.
+
+KEYWORDS : Gunicorn, Nginx, collectstatic, PostgreSQL, SSL, environment variable, Sentry
+
+================================================================================
+END OF FILE — Django_Interview_QA.txt — 20 Questions
+================================================================================

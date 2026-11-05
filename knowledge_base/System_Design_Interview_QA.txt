@@ -1,0 +1,922 @@
+================================================================================
+FILE      : System_Design_Interview_QA.txt
+SUBJECT   : System Design — Interview Questions & Answers
+QUESTIONS : 20
+LEVELS    : Beginner (5) | Intermediate (9) | Advanced (6)
+PROJECT   : InterviewMate AI — IBM SkillsBuild AICTE-2026
+================================================================================
+
+FORMAT NOTE: Each design question includes:
+  REQUIREMENTS | HIGH-LEVEL ARCHITECTURE | MAIN COMPONENTS |
+  DESIGN EXPLANATION | SCALABILITY CONSIDERATIONS
+
+--------------------------------------------------------------------------------
+ID       : SD-001
+TOPIC    : Client-Server Architecture
+DIFFICULTY: Beginner
+--------------------------------------------------------------------------------
+QUESTION :
+What is the client-server model? How does a typical web request flow from a
+browser to a database and back?
+
+ANSWER :
+The client-server model separates concerns between a CLIENT (initiates requests)
+and a SERVER (processes requests and returns responses).
+
+  TYPICAL WEB REQUEST FLOW:
+  1. User types URL → browser sends DNS lookup → DNS resolves to IP address.
+  2. Browser opens a TCP connection to the server (or CDN edge node).
+  3. Browser sends an HTTP GET request.
+  4. Web server (Nginx) receives request, forwards to application server (Gunicorn).
+  5. Application server runs business logic (Django view).
+  6. Application queries the database (PostgreSQL) via ORM.
+  7. Database returns rows → ORM deserialises to Python objects.
+  8. Application renders HTML or serialises JSON response.
+  9. Web server sends HTTP response to browser.
+  10. Browser renders HTML / JavaScript processes JSON.
+
+  COMPONENTS: DNS, CDN, Load Balancer, Web Server, App Server, Cache, Database.
+
+  Stateless HTTP means each request carries all information needed (cookies,
+  auth headers). Sessions are stored server-side or in a JWT.
+
+KEYWORDS : client-server, HTTP, DNS, TCP, request-response, stateless, application server
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : SD-002
+TOPIC    : Monolithic vs Microservices
+DIFFICULTY: Beginner
+--------------------------------------------------------------------------------
+QUESTION :
+Compare monolithic and microservices architectures. When would you choose each?
+
+REQUIREMENTS    : An e-commerce platform that starts small and may scale.
+HIGH-LEVEL ARCH : Monolith — one deployable unit vs Microservices — many services.
+
+DESIGN EXPLANATION :
+  MONOLITHIC:
+  - All components (auth, catalog, orders, payments) in one codebase and process.
+  + Simple to develop, test, and deploy initially.
+  + No network overhead between components.
+  − Scaling requires scaling the entire application.
+  − Slow deploys as codebase grows; one bug can crash everything.
+  − Technology lock-in — all components share one language/framework.
+
+  MICROSERVICES:
+  - Each business capability is a separate service with its own DB.
+  + Scale independently (only scale the checkout service during Black Friday).
+  + Teams can own services autonomously with different tech stacks.
+  + Failures are isolated.
+  − Network latency between services; distributed transactions are hard.
+  − Operational complexity: service discovery, distributed tracing, more infra.
+  − Higher initial development cost.
+
+  RECOMMENDATION:
+  Start monolithic. Once you understand your domain boundaries and the app is
+  proven, extract services that need independent scaling. "Modular monolith"
+  is a valid middle ground — clean module boundaries without network hops.
+
+SCALABILITY : Microservices allow horizontal scaling per service.
+KEYWORDS    : monolith, microservices, coupling, domain, scaling, operational complexity
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : SD-003
+TOPIC    : Load Balancing
+DIFFICULTY: Beginner
+--------------------------------------------------------------------------------
+QUESTION :
+What is a load balancer and what algorithms does it use?
+
+REQUIREMENTS    : Distribute traffic evenly across multiple application servers.
+HIGH-LEVEL ARCH : Client → Load Balancer → [Server 1, Server 2, Server 3]
+
+MAIN COMPONENTS :
+  - Load Balancer (L4: TCP/IP level, or L7: HTTP level — smarter routing).
+  - Health checks — LB periodically pings servers; removes unhealthy nodes.
+  - Session persistence (sticky sessions) — route same user to same server.
+
+ALGORITHMS:
+  Round Robin     — Rotate through servers in sequence. Simple, uniform load.
+  Weighted RR     — Assign more requests to higher-capacity servers.
+  Least Connections — Route to server with fewest active connections.
+  IP Hash         — Same client IP always routes to same server (sticky).
+  Random          — Select a random server.
+
+DESIGN EXPLANATION :
+  L7 load balancer (e.g., Nginx, AWS ALB) can route based on URL path:
+  /api/auth → auth service, /api/orders → order service.
+  Enables blue-green and canary deployments by routing percentages of traffic.
+
+SCALABILITY : Active-passive HA setup with a standby LB. DNS round-robin
+              across multiple LBs for extreme traffic.
+
+KEYWORDS : load balancer, round robin, least connections, sticky sessions, health check, L7
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : SD-004
+TOPIC    : Caching
+DIFFICULTY: Beginner
+--------------------------------------------------------------------------------
+QUESTION :
+What is caching in system design? Describe different caching strategies and
+eviction policies.
+
+REQUIREMENTS    : Reduce database load and improve response time.
+HIGH-LEVEL ARCH : Client → App Server → [Cache (Redis)] → Database
+
+MAIN COMPONENTS : Redis / Memcached cache layer, App server, Database.
+
+CACHING STRATEGIES:
+  Cache-Aside (Lazy Loading):
+    App checks cache; on miss, fetches from DB, writes to cache, returns.
+    Most common. Cache only contains requested data.
+
+  Write-Through:
+    On write, update both cache and DB synchronously.
+    Cache always consistent; extra write latency.
+
+  Write-Behind (Write-Back):
+    Write to cache; async write to DB later.
+    Low write latency; risk of data loss on cache failure.
+
+  Read-Through:
+    Cache sits in front of DB; cache handles all reads itself.
+
+EVICTION POLICIES:
+  LRU (Least Recently Used) — evict the least recently accessed item. Most common.
+  LFU (Least Frequently Used) — evict least accessed over time.
+  TTL (Time-To-Live) — expire items after a set duration.
+  FIFO — evict oldest items first.
+
+SCALABILITY : Redis Cluster shards keyspace across nodes. Replicas handle reads.
+
+KEYWORDS : cache, Redis, cache-aside, write-through, LRU, TTL, eviction, hit rate
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : SD-005
+TOPIC    : REST API Design
+DIFFICULTY: Beginner
+--------------------------------------------------------------------------------
+QUESTION :
+What are RESTful API design principles? Describe best practices for versioning,
+authentication, and error responses.
+
+ANSWER :
+REST (Representational State Transfer) principles:
+  1. Client-Server separation.
+  2. Statelessness — each request contains all needed context.
+  3. Cacheability — responses indicate if they can be cached.
+  4. Uniform interface — resources identified by URLs; standard HTTP verbs.
+  5. Layered system — client doesn't know if it talks to server or proxy.
+
+  RESOURCE NAMING:
+  GET    /articles             — list articles
+  POST   /articles             — create article
+  GET    /articles/{id}        — get article
+  PUT    /articles/{id}        — full update
+  PATCH  /articles/{id}        — partial update
+  DELETE /articles/{id}        — delete
+
+  VERSIONING:
+  /api/v1/articles  (URL versioning — simple, visible)
+  Accept: application/vnd.api+json;version=2  (header versioning — cleaner)
+
+  AUTHENTICATION:
+  Bearer tokens: Authorization: Bearer <jwt_token>
+  API keys for service-to-service: X-API-Key: <key>
+
+  ERROR RESPONSES (use appropriate HTTP status codes):
+  200 OK, 201 Created, 400 Bad Request, 401 Unauthorised,
+  403 Forbidden, 404 Not Found, 409 Conflict, 422 Unprocessable,
+  429 Too Many Requests, 500 Internal Server Error.
+
+  Body: {"error": "validation_failed", "detail": "title is required", "field": "title"}
+
+KEYWORDS : REST, HTTP verbs, versioning, JWT, status codes, uniform interface, idempotent
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : SD-006
+TOPIC    : Database Design & Replication
+DIFFICULTY: Intermediate
+--------------------------------------------------------------------------------
+QUESTION :
+Design the database schema for a social media platform. How would you handle
+database replication?
+
+REQUIREMENTS    :
+  - Users, posts, follows (follower-following), likes, comments.
+  - Read-heavy workload (10:1 reads to writes).
+
+HIGH-LEVEL ARCH : App → Write Primary DB → Async Replication → Read Replicas
+
+MAIN COMPONENTS :
+  Users(id, username, email, created_at)
+  Posts(id, user_id FK, content, media_url, created_at)
+  Follows(follower_id FK, followee_id FK, created_at) — composite PK
+  Likes(user_id FK, post_id FK, created_at) — composite PK
+  Comments(id, post_id FK, user_id FK, body, created_at)
+
+  INDEXES:
+  Posts(user_id, created_at DESC) — for "my posts" feed
+  Follows(followee_id)            — for "who follows me"
+  Likes(post_id)                  — count likes on a post
+
+DESIGN EXPLANATION :
+  Direct all writes to the PRIMARY. Read replicas serve timelines, profile
+  views, and search. Replication lag < 100ms for most use cases.
+  For home feed (posts from followed users), a denormalised feed table or
+  a Redis-backed fanout cache is needed for high-scale.
+
+SCALABILITY : Horizontal read replicas. Shard by user_id when > 100M users.
+              Archive old posts to cold storage.
+
+KEYWORDS : schema, replication, read replica, fanout, index, sharding, social media
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : SD-007
+TOPIC    : SQL vs NoSQL
+DIFFICULTY: Intermediate
+--------------------------------------------------------------------------------
+QUESTION :
+When would you combine SQL and NoSQL databases in the same system
+(polyglot persistence)?
+
+REQUIREMENTS    : E-commerce platform needing different data characteristics.
+HIGH-LEVEL ARCH : Multiple services, each with the best-fit database.
+
+DESIGN EXPLANATION :
+  POLYGLOT PERSISTENCE — use the right database for each data type:
+
+  PostgreSQL (relational):
+  → Orders, payments, inventory (ACID transactions critical)
+  → Complex JOINs between orders, line items, customers
+
+  MongoDB (document):
+  → Product catalog (varying attributes per category — shirt has sizes,
+    TV has specs; schema flexibility helps)
+
+  Redis (key-value):
+  → Session storage, shopping cart (per-user temporary data)
+  → Leaderboards, rate limiting counters, caching hot products
+
+  Elasticsearch:
+  → Product search with full-text, facets, typo tolerance
+
+  Cassandra (wide-column):
+  → User activity/event logs — high write throughput, time-series queries
+
+  TRADE-OFFS:
+  + Each database optimised for its specific access pattern.
+  − Data consistency across databases is the developer's responsibility.
+  − More operational complexity (backups, monitoring, expertise per DB).
+  − Joins across databases must be done in application code.
+
+SCALABILITY : Each database scales independently along its own dimension.
+
+KEYWORDS : polyglot, PostgreSQL, MongoDB, Redis, Elasticsearch, Cassandra, trade-offs
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : SD-008
+TOPIC    : Message Queues
+DIFFICULTY: Intermediate
+--------------------------------------------------------------------------------
+QUESTION :
+What is a message queue and when would you use one? Compare synchronous
+vs asynchronous communication.
+
+REQUIREMENTS    : Decouple services; handle spikes without losing data.
+HIGH-LEVEL ARCH : Producer → Message Queue → Consumer(s)
+
+MAIN COMPONENTS :
+  - Message Broker: RabbitMQ, Apache Kafka, AWS SQS, Google Pub/Sub
+  - Producers: services that publish messages.
+  - Consumers: services that subscribe and process messages.
+  - Dead Letter Queue (DLQ): receives messages that repeatedly fail processing.
+
+SYNCHRONOUS vs ASYNCHRONOUS:
+  Synchronous: Caller waits for response. Simple but tightly coupled.
+               Payment API calls shipping API and waits.
+  Asynchronous: Caller fires a message and continues. Loosely coupled.
+               Payment service publishes "order_paid" event; shipping,
+               email, and analytics services each consume it independently.
+
+USE CASES:
+  - Email/SMS notifications (non-blocking after order placed).
+  - Image/video processing (enqueue on upload, process in background).
+  - Order processing pipeline.
+  - Rate limiting ingestion spikes (queue absorbs burst, consumers process steadily).
+  - Event sourcing and audit logs.
+
+  Kafka is preferred for high-throughput, persistent event streams with
+  multiple consumer groups replaying from any offset.
+
+SCALABILITY : Kafka partitions allow parallel consumers. RabbitMQ clusters
+              horizontally. SQS scales automatically.
+
+KEYWORDS : message queue, Kafka, RabbitMQ, async, producer, consumer, DLQ, event-driven
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : SD-009
+TOPIC    : Rate Limiting
+DIFFICULTY: Intermediate
+--------------------------------------------------------------------------------
+QUESTION :
+How do you implement rate limiting in a distributed API?
+
+REQUIREMENTS    : Limit each user to 100 requests per minute across multiple
+                  app servers.
+HIGH-LEVEL ARCH : Client → API Gateway (rate limit check) → App Servers
+
+MAIN COMPONENTS :
+  - API Gateway or dedicated rate limiter middleware.
+  - Redis (shared atomic counter across all servers).
+  - Rate limit response: HTTP 429 Too Many Requests.
+
+ALGORITHMS:
+  FIXED WINDOW COUNTER:
+    key = "user:{id}:minute:{current_minute}"
+    count = redis.incr(key)
+    if count == 1: redis.expire(key, 60)
+    if count > 100: return 429
+    + Simple. − Burst at window boundary (99 at 0:59, 99 at 1:01 = 198).
+
+  SLIDING WINDOW LOG:
+    Store timestamps of each request in a sorted set.
+    Count requests in last 60s. Accurate; higher memory.
+
+  TOKEN BUCKET:
+    Bucket holds up to N tokens. Each request consumes 1 token.
+    Tokens refill at a fixed rate. Allows controlled bursts.
+
+  LEAKY BUCKET:
+    Requests enter a queue (bucket); processed at a constant rate.
+    Smooths traffic. Excess requests overflow (dropped or queued).
+
+RESPONSE HEADERS (best practice):
+  X-RateLimit-Limit: 100
+  X-RateLimit-Remaining: 47
+  X-RateLimit-Reset: 1699185600
+  Retry-After: 13  (seconds until next window)
+
+SCALABILITY : Redis Cluster for HA. Lua scripts for atomic incr+expire.
+
+KEYWORDS : rate limiting, token bucket, sliding window, Redis, 429, API gateway, Lua
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : SD-010
+TOPIC    : Authentication & Security
+DIFFICULTY: Intermediate
+--------------------------------------------------------------------------------
+QUESTION :
+How would you design a secure authentication system? Compare session-based and
+JWT-based authentication.
+
+REQUIREMENTS    : Secure login, token refresh, logout, multi-device support.
+HIGH-LEVEL ARCH : Client ↔ Auth Service ↔ (Redis session store / JWT secret)
+
+SESSION-BASED:
+  1. User logs in → server creates session in Redis/DB → returns session cookie.
+  2. Every request: server looks up session_id in Redis → O(1) lookup.
+  3. Logout: delete session from Redis.
+  + Easy to invalidate (delete session).
+  − Requires shared session store (not stateless); harder to scale across services.
+
+JWT (JSON Web Token):
+  1. User logs in → server signs JWT with secret/private key → returns token.
+  2. Client stores token (httpOnly cookie or Authorization header).
+  3. Every request: server verifies JWT signature (no DB call — stateless).
+  4. Logout challenge: cannot "revoke" a JWT without a blacklist.
+  + Stateless; works across microservices.
+  − Token revocation requires Redis blacklist or very short expiry (e.g., 15 min).
+
+  BEST PRACTICE:
+  - Access token (JWT): short-lived (15 min).
+  - Refresh token: long-lived (7 days), stored in httpOnly cookie, stored in DB.
+  - On expiry, client uses refresh token to get new access token.
+  - On logout, delete refresh token from DB.
+  - HTTPS everywhere; never store sensitive tokens in localStorage.
+
+SECURITY CHECKLIST:
+  ✓ Hash passwords with bcrypt (cost factor 12+).
+  ✓ Rate-limit login attempts.
+  ✓ MFA (TOTP via Google Authenticator).
+  ✓ Audit log all auth events.
+
+KEYWORDS : JWT, session, refresh token, bcrypt, httpOnly, MFA, stateless, revocation
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : SD-011
+TOPIC    : Distributed Systems
+DIFFICULTY: Intermediate
+--------------------------------------------------------------------------------
+QUESTION :
+What is the CAP theorem? How does it guide database selection?
+
+ANSWER :
+CAP theorem states that a distributed system can guarantee at most TWO of
+the three properties simultaneously:
+
+  C — CONSISTENCY:
+      Every read receives the most recent write (or an error).
+
+  A — AVAILABILITY:
+      Every request receives a response (not necessarily latest data).
+
+  P — PARTITION TOLERANCE:
+      System continues operating despite network partition
+      (some nodes cannot communicate).
+
+  Since network partitions are inevitable in distributed systems, P is
+  non-negotiable. So real systems choose CA or CP during a partition:
+
+  CP (Consistency + Partition Tolerance):
+    Returns errors rather than stale data during a partition.
+    Examples: HBase, ZooKeeper, MongoDB (with strong read concern),
+              Consul, etcd.
+    Use when: financial transactions, inventory counts.
+
+  AP (Availability + Partition Tolerance):
+    Returns possibly stale data rather than erroring.
+    Examples: Cassandra, DynamoDB, CouchDB.
+    Use when: user profiles, social feeds, analytics — eventual consistency OK.
+
+  PACELC theorem extends CAP: even without partitions, there is a trade-off
+  between Latency and Consistency (ELC). Many modern databases let you tune
+  the consistency level per operation (e.g., Cassandra: ONE, QUORUM, ALL).
+
+KEYWORDS : CAP theorem, consistency, availability, partition, PACELC, eventual consistency
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : SD-012
+TOPIC    : URL Shortener Design
+DIFFICULTY: Intermediate
+--------------------------------------------------------------------------------
+QUESTION :
+Design a URL shortener service (like bit.ly).
+
+REQUIREMENTS    :
+  - Functional: shorten URL, redirect short → long URL, optional custom alias.
+  - Non-functional: 100M URLs/day writes, 10B redirects/day, < 50ms redirect latency.
+
+HIGH-LEVEL ARCH :
+  Client → Load Balancer → [Shortener Service | Redirect Service]
+         ↓                          ↓
+   Write DB (PostgreSQL)     Read Cache (Redis)
+                                     ↓ (cache miss)
+                               Read Replica DB
+
+MAIN COMPONENTS :
+  1. ID GENERATION: 62-character alphabet (a-z A-Z 0-9). 7-char code = 62^7 ≈ 3.5T URLs.
+     Use a distributed counter (DB sequence, Snowflake ID, or Zookeeper) → Base62 encode.
+
+  2. STORAGE SCHEMA:
+     urls(id BIGINT PK, short_code VARCHAR(7) UNIQUE, long_url TEXT, created_at, user_id)
+
+  3. REDIRECT SERVICE (hot path):
+     GET /{code} → check Redis → if hit: redirect. If miss: query DB, cache, redirect.
+     HTTP 301 (permanent — browser caches, reduces future traffic) vs
+     HTTP 302 (temporary — every redirect hits the server, enables analytics).
+
+  4. ANALYTICS (if needed): publish redirect event to Kafka → analytics consumer.
+
+DESIGN EXPLANATION :
+  Short code generation must avoid collisions. Hash-then-check works for low scale;
+  counter-based with pre-allocated ranges per server is cleaner at scale.
+
+SCALABILITY :
+  - Redis cluster caches hot URLs (Pareto: 20% of URLs get 80% of clicks).
+  - Multiple Redirect Service instances behind LB.
+  - DB read replicas for cold URL lookups.
+
+KEYWORDS : URL shortener, Base62, Redis, redirect, 301 vs 302, Snowflake ID, sharding
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : SD-013
+TOPIC    : Chat Application Design
+DIFFICULTY: Advanced
+--------------------------------------------------------------------------------
+QUESTION :
+Design a real-time chat application like WhatsApp or Slack.
+
+REQUIREMENTS    :
+  - One-on-one and group messaging.
+  - Message delivery: sent → delivered → read receipts.
+  - Presence (online/offline).
+  - 1B users, 100M active daily.
+
+HIGH-LEVEL ARCH :
+  Client ↔ WebSocket Gateway ↔ Message Router
+                                     ↓         ↓
+                               Message DB   Notification Service (FCM/APNs)
+                                     ↓
+                            Message Queue (Kafka)
+                                     ↓
+                             Analytics / History Service
+
+MAIN COMPONENTS :
+  1. WEBSOCKET GATEWAY: persistent connections for real-time delivery.
+     Each server handles ~100K connections. Multiple servers + Redis Pub/Sub
+     to route messages between gateways.
+
+  2. MESSAGE ROUTING: publish to Kafka topic (per user/group). Consumer
+     delivers to the recipient's WebSocket gateway.
+
+  3. STORAGE:
+     - Cassandra: chat history (high write throughput, time-ordered access).
+       Schema: (conversation_id, message_id, sender, content, timestamp)
+     - PostgreSQL: users, groups, membership.
+     - Redis: presence status (TTL), session-to-server mapping.
+
+  4. DELIVERY RECEIPTS: each message has status: sent/delivered/read.
+     Client ACKs delivery → server updates status → notifies sender.
+
+  5. OFFLINE: push notification via FCM (Android) / APNs (iOS).
+
+DESIGN EXPLANATION :
+  Fan-out on write for group messages: when a message is sent to a group,
+  enqueue a copy for each member (fan-out). At huge scale (10K-member group),
+  fan-out on read is better — each client fetches on open.
+
+SCALABILITY :
+  WebSocket servers scale horizontally. Kafka partitioned by conversation_id
+  ensures message ordering within a conversation.
+
+KEYWORDS : WebSocket, Kafka, Cassandra, fan-out, presence, receipts, push notifications
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : SD-014
+TOPIC    : E-Commerce System Design
+DIFFICULTY: Advanced
+--------------------------------------------------------------------------------
+QUESTION :
+Design the core architecture of an e-commerce platform.
+
+REQUIREMENTS    :
+  - Product catalog, search, cart, orders, payments, inventory.
+  - Handle 10M daily active users, 1M orders/day, Black Friday spikes 10×.
+
+HIGH-LEVEL ARCH :
+  CDN → Load Balancer → API Gateway → Microservices
+  Services: Catalog, Search, Cart, Order, Payment, Inventory, Notification
+
+MAIN COMPONENTS :
+
+  CATALOG SERVICE:
+  - PostgreSQL for product data; Elasticsearch for search (full-text, filters).
+  - CDN caches product images and static assets.
+
+  CART SERVICE:
+  - Redis: user_cart:{user_id} → list of {product_id, qty}.
+  - TTL: cart expires after 30 days of inactivity.
+
+  ORDER SERVICE:
+  - PostgreSQL with ACID transactions: reserve inventory → create order → charge.
+  - Publishes "order_created" event to Kafka.
+
+  INVENTORY SERVICE:
+  - PESSIMISTIC LOCKING (SELECT FOR UPDATE) when decrementing stock.
+  - Or: reserve via distributed lock (Redis Redlock) for high throughput.
+
+  PAYMENT SERVICE:
+  - Integrate with payment provider (Stripe, Razorpay).
+  - Idempotency key per payment attempt to handle retries safely.
+
+  NOTIFICATION SERVICE:
+  - Consumes Kafka events: send order confirmation email, SMS, push.
+
+DESIGN EXPLANATION :
+  The critical path: add to cart → checkout → payment → inventory decrement.
+  Each step is asynchronous after payment confirmation. Saga pattern handles
+  distributed transactions: each service executes locally; failures trigger
+  compensating transactions.
+
+SCALABILITY :
+  Auto-scale Order and Payment services. Pre-warm cache and scale DB replicas
+  before Black Friday. Use Kafka to buffer notification spikes.
+
+KEYWORDS : e-commerce, saga, idempotency, inventory, Kafka, Redis cart, Elasticsearch, CDN
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : SD-015
+TOPIC    : Scalability & Availability
+DIFFICULTY: Intermediate
+--------------------------------------------------------------------------------
+QUESTION :
+What is the difference between horizontal and vertical scaling? What is high
+availability (HA) and how do you achieve it?
+
+ANSWER :
+  VERTICAL SCALING (Scale Up):
+  Add more CPU, RAM, or faster storage to a single machine.
+  + Simple — no code changes.
+  − Has a physical ceiling. Single point of failure. Expensive at extreme scale.
+
+  HORIZONTAL SCALING (Scale Out):
+  Add more machines and distribute load.
+  + Near-linear throughput growth. Fault tolerant.
+  − Requires stateless services (or distributed state). More operational complexity.
+
+  STATELESS SERVICES are key: store session in Redis, not in-process.
+  Any server can handle any request.
+
+  HIGH AVAILABILITY — design so the system remains operational despite
+  individual component failures. Target: 99.99% uptime = < 52 min/year downtime.
+
+  TECHNIQUES:
+  - Redundancy: no single points of failure (multiple LBs, app servers, DB replicas).
+  - Health checks: auto-remove unhealthy instances.
+  - Failover: automatic promotion of DB replica if primary fails.
+  - Circuit breaker: stop calling a failing downstream service; return fallback.
+  - Chaos engineering: intentionally inject failures (Netflix Chaos Monkey) to
+    find weaknesses before customers do.
+  - Multi-region deployment for global HA.
+
+KEYWORDS : vertical scaling, horizontal scaling, HA, stateless, failover, circuit breaker, SLA
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : SD-016
+TOPIC    : Notification System Design
+DIFFICULTY: Intermediate
+--------------------------------------------------------------------------------
+QUESTION :
+Design a scalable notification system that sends email, SMS, and push
+notifications.
+
+REQUIREMENTS    :
+  - Support multiple channels: email, SMS, push.
+  - 10M notifications/day. Deduplication. User preferences.
+
+HIGH-LEVEL ARCH :
+  Services → Notification API → Kafka → [Email Worker | SMS Worker | Push Worker]
+                                               ↓               ↓             ↓
+                                          SendGrid         Twilio       FCM/APNs
+
+MAIN COMPONENTS :
+  1. NOTIFICATION API: receives requests from other services.
+     Validates request, fetches user notification preferences from DB.
+     Publishes to Kafka topic per channel.
+
+  2. KAFKA TOPICS: email_notifications, sms_notifications, push_notifications.
+     Partitioned by user_id for ordering.
+
+  3. WORKERS: consume from Kafka, call third-party provider APIs.
+     Retry with exponential backoff on transient failures.
+     Dead Letter Queue for persistent failures.
+
+  4. DEDUPLICATION: store notification_id in Redis (TTL 24h).
+     Worker checks Redis before sending — skip if already sent.
+
+  5. USER PREFERENCES: DB table — user_id, channel, enabled (bool).
+     Notification API checks before enqueuing.
+
+  6. RATE LIMITING: max 10 SMS/day per user (costs money).
+     Redis counter per user per channel per day.
+
+DESIGN EXPLANATION :
+  Asynchronous pipeline decouples senders from delivery. Kafka provides
+  durability (messages persist if workers are down). Workers are independently
+  scalable per channel.
+
+SCALABILITY : Add worker instances per channel. Kafka auto-balances partitions.
+
+KEYWORDS : notification, Kafka, SendGrid, Twilio, FCM, deduplication, retry, DLQ
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : SD-017
+TOPIC    : CDN & Content Delivery
+DIFFICULTY: Intermediate
+--------------------------------------------------------------------------------
+QUESTION :
+What is a CDN and how does it improve performance? Describe push vs pull CDN.
+
+ANSWER :
+A Content Delivery Network (CDN) is a geographically distributed network of
+edge servers that cache content close to end users, reducing latency and
+origin server load.
+
+  HOW IT WORKS:
+  1. User in Mumbai requests image from a US-based origin server.
+  2. Request goes to nearest CDN edge (Mumbai POP).
+  3. Cache HIT: edge returns image in <10ms.
+  4. Cache MISS: edge fetches from origin, caches locally for future requests.
+
+  PULL CDN (most common — e.g., CloudFront, Cloudflare):
+  - Edge fetches content from origin on first request, then caches.
+  - No pre-loading required.
+  - Best for large, frequently accessed content (images, JS, CSS).
+
+  PUSH CDN:
+  - Developers proactively upload content to CDN before any request.
+  - Edge always has content ready.
+  - Best for known, scheduled, or critical assets (marketing campaigns).
+
+  CACHE INVALIDATION:
+  - Set appropriate Cache-Control / Expires headers.
+  - CDN purge API to invalidate specific keys on content update.
+  - Use versioned URLs (/assets/app.v4.js) to avoid stale cache issues.
+
+  USE CASES: static assets, video streaming, software downloads,
+             DDoS protection (CDN absorbs traffic).
+
+KEYWORDS : CDN, edge server, cache hit, pull CDN, push CDN, Cache-Control, invalidation
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : SD-018
+TOPIC    : Search System Design
+DIFFICULTY: Advanced
+--------------------------------------------------------------------------------
+QUESTION :
+Design the search feature for a large e-commerce platform.
+
+REQUIREMENTS    :
+  - Full-text search with typo tolerance and faceted filtering.
+  - Product catalog: 100M products, 10K searches/second.
+
+HIGH-LEVEL ARCH :
+  DB (PostgreSQL) → Change Data Capture → Kafka → Elasticsearch Indexer
+  User → Search API → Elasticsearch Cluster → Ranked Results
+
+MAIN COMPONENTS :
+  1. ELASTICSEARCH CLUSTER:
+     - Index: products with fields: name, description, category, brand, price, rating.
+     - Custom analyzer: lowercase, stopwords, stemming, n-grams for typo tolerance.
+     - Relevance scoring: combination of BM25 text score + popularity boost + recency.
+
+  2. SYNC PIPELINE:
+     - Debezium CDC captures PostgreSQL row changes → publishes to Kafka.
+     - Indexer service consumes Kafka → upserts Elasticsearch documents.
+     - Near-real-time (< 1s lag for most changes).
+
+  3. QUERY DESIGN:
+     - Full-text match on name/description.
+     - Facets (filters): category, price range, brand, rating.
+     - Sort: relevance, price asc/desc, rating.
+     - Pagination: search_after (keyset) preferred over offset for deep pages.
+
+  4. CACHING:
+     - Redis caches top-1000 most frequent queries (invalidated on product updates).
+
+DESIGN EXPLANATION :
+  Elasticsearch's inverted index provides O(1) term lookups. The separate
+  read model (ES) is kept in sync with the write model (PG) via CDC,
+  implementing CQRS (Command Query Responsibility Segregation).
+
+SCALABILITY :
+  Shard Elasticsearch index across multiple nodes. Read replicas per shard.
+  Scale indexer consumers independently during bulk import.
+
+KEYWORDS : Elasticsearch, inverted index, CDC, Debezium, Kafka, CQRS, BM25, facets
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : SD-019
+TOPIC    : Video Streaming Design
+DIFFICULTY: Advanced
+--------------------------------------------------------------------------------
+QUESTION :
+How would you design a video streaming service like YouTube?
+
+REQUIREMENTS    :
+  - Upload, transcode, store, and stream videos. 500 hours/min uploaded.
+  - Adaptive bitrate streaming. 1B users.
+
+HIGH-LEVEL ARCH :
+  Upload Client → Upload Service → Raw Object Storage (S3)
+                                          ↓
+                               Transcoding Service (workers)
+                                          ↓
+                            CDN (edge servers store video segments)
+                                          ↓
+                                  Streaming Client
+
+MAIN COMPONENTS :
+  1. UPLOAD: chunked upload (resumable). Store raw video in S3.
+     Publish "video_uploaded" event to Kafka.
+
+  2. TRANSCODING: Worker pool consumes events. Transcode to multiple
+     resolutions (360p, 720p, 1080p, 4K). HLS/DASH format:
+     video split into 2–10s segments + manifest file (.m3u8).
+
+  3. STORAGE:
+     - S3 / GCS for video segments and thumbnails.
+     - PostgreSQL for video metadata (title, description, likes, views).
+     - Redis for view counters (batch-flush to DB every 5 min).
+     - Cassandra for comments (high write volume, time-ordered).
+
+  4. CDN: video segments cached at edge servers closest to viewer.
+
+  5. ADAPTIVE BITRATE (ABR): client player monitors network bandwidth and
+     switches between bitrate variants seamlessly.
+
+  6. RECOMMENDATIONS: offline ML pipeline writes recommended videos per user
+     to Redis; returned with feed API.
+
+DESIGN EXPLANATION :
+  The most critical bottleneck is transcoding. Use a horizontally scalable
+  worker pool. Prioritise transcoding the 360p version first so the video
+  becomes watchable quickly.
+
+SCALABILITY :
+  CDN handles 99% of video traffic — origin rarely hit. Transcoding farm
+  auto-scales with GPU instances.
+
+KEYWORDS : video streaming, HLS, transcoding, S3, CDN, ABR, adaptive bitrate, Kafka
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : SD-020
+TOPIC    : Ride-Sharing System Design
+DIFFICULTY: Advanced
+--------------------------------------------------------------------------------
+QUESTION :
+Design the core location matching and ride dispatch system for a ride-sharing
+app like Uber.
+
+REQUIREMENTS    :
+  - Match riders with nearby drivers in real time.
+  - 5M concurrent drivers, 10M ride requests/day.
+  - ETA estimation. Surge pricing.
+
+HIGH-LEVEL ARCH :
+  Driver App → Location Service → Redis (geo index)
+  Rider App  → Matching Service → Driver candidates → ETA Service → Dispatch
+
+MAIN COMPONENTS :
+  1. LOCATION SERVICE:
+     - Drivers send GPS updates every 5 seconds.
+     - Redis GEO commands (GEOADD, GEORADIUS) — O(N+log M) — find drivers
+       within X km of rider. Redis stores driver positions in a geohash-indexed
+       sorted set.
+
+  2. MATCHING SERVICE:
+     - Query Redis: find all available drivers within 5 km radius.
+     - Filter by: availability, vehicle type, rating.
+     - Rank by proximity + ETA.
+
+  3. ETA SERVICE:
+     - Road-network graph with live traffic data.
+     - Dijkstra / A* for shortest path. Pre-computed tiles for common routes.
+
+  4. DISPATCH:
+     - Send ride request notification to top-N drivers sequentially
+       (or simultaneously with first-accept wins).
+     - Timeout after 10s → try next driver.
+
+  5. SURGE PRICING:
+     - Demand/supply ratio per geohash cell, updated every 1 min.
+     - Multiplier stored in Redis; read on each pricing request.
+
+  6. STORAGE:
+     - PostgreSQL: users, trips, payments.
+     - Cassandra: trip telemetry (GPS points, timestamps — high write volume).
+     - Kafka: location updates, ride events, analytics.
+
+DESIGN EXPLANATION :
+  Geospatial indexing with Redis enables sub-millisecond radius queries.
+  The matching cycle must complete in < 500ms to feel instantaneous.
+
+SCALABILITY :
+  Partition Redis geo index by city or geohash region. Location service
+  scales horizontally. Kafka buffers millions of location events/sec.
+
+KEYWORDS : geospatial, Redis GEO, matching, dispatch, ETA, surge pricing, Kafka, Cassandra
+
+================================================================================
+END OF FILE — System_Design_Interview_QA.txt — 20 Questions
+================================================================================

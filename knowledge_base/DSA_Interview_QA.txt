@@ -1,0 +1,1063 @@
+================================================================================
+FILE      : DSA_Interview_QA.txt
+SUBJECT   : Data Structures & Algorithms — Interview Questions & Answers
+QUESTIONS : 25
+LEVELS    : Beginner (8) | Intermediate (10) | Advanced (7)
+PROJECT   : InterviewMate AI — IBM SkillsBuild AICTE-2026
+================================================================================
+
+FORMAT NOTE: Each coding problem includes:
+  PROBLEM STATEMENT | PYTHON SOLUTION | EXPLANATION | TIME COMPLEXITY | SPACE COMPLEXITY
+
+--------------------------------------------------------------------------------
+ID       : DSA-001
+TOPIC    : Arrays & Strings
+DIFFICULTY: Beginner
+--------------------------------------------------------------------------------
+QUESTION :
+What is the difference between an array and a dynamic array (list)? Describe
+the time complexities of common list operations in Python.
+
+ANSWER :
+An ARRAY is a contiguous block of memory storing fixed-size elements. Access
+is O(1). Size is fixed at creation.
+
+A DYNAMIC ARRAY (Python list) wraps an array with automatic resizing. When
+capacity is exceeded, a new larger array is allocated (typically 2× the size)
+and elements are copied — amortised O(1) append.
+
+  OPERATION           | AVERAGE | WORST
+  --------------------|---------|-------
+  Access  list[i]     | O(1)    | O(1)
+  Append  list.append | O(1)    | O(n)*  (* resize event)
+  Insert  list.insert | O(n)    | O(n)
+  Delete  list.pop()  | O(1)    | O(1)   (from end)
+  Delete  list.pop(i) | O(n)    | O(n)
+  Search  x in list   | O(n)    | O(n)
+  Sort    list.sort   | O(n log n) | O(n log n)
+
+  Python list is implemented in CPython as a dynamic array of pointers,
+  so accessing elements is O(1) but deleting from the middle requires
+  shifting — O(n).
+
+KEYWORDS : array, dynamic array, amortised, O(1), O(n), Python list, resize
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : DSA-002
+TOPIC    : Arrays & Strings — Coding Problem
+DIFFICULTY: Beginner
+--------------------------------------------------------------------------------
+QUESTION :
+Two Sum: Given an array of integers and a target sum, return the indices of
+the two numbers that add up to the target. Assume exactly one solution exists.
+
+PROBLEM STATEMENT :
+  Input:  nums = [2, 7, 11, 15], target = 9
+  Output: [0, 1]  (nums[0] + nums[1] = 2 + 7 = 9)
+
+PYTHON SOLUTION :
+  def two_sum(nums: list[int], target: int) -> list[int]:
+      seen = {}          # value → index
+      for i, num in enumerate(nums):
+          complement = target - num
+          if complement in seen:
+              return [seen[complement], i]
+          seen[num] = i
+      return []
+
+EXPLANATION :
+  For each number, compute its complement (target - num). If the complement
+  has been seen before, we have found the pair. The hash map stores every
+  number we have already visited, allowing O(1) lookup.
+
+TIME COMPLEXITY  : O(n) — one pass through the array
+SPACE COMPLEXITY : O(n) — hash map stores up to n entries
+
+KEYWORDS : two sum, hash map, complement, single pass, array
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : DSA-003
+TOPIC    : Arrays & Strings — Coding Problem
+DIFFICULTY: Intermediate
+--------------------------------------------------------------------------------
+QUESTION :
+Sliding Window Maximum: Find the maximum value in every contiguous subarray
+of size k in an array.
+
+PROBLEM STATEMENT :
+  Input:  nums = [1, 3, -1, -3, 5, 3, 6, 7], k = 3
+  Output: [3, 3, 5, 5, 6, 7]
+
+PYTHON SOLUTION :
+  from collections import deque
+
+  def max_sliding_window(nums: list[int], k: int) -> list[int]:
+      result = []
+      dq = deque()          # stores indices; front = index of current max
+
+      for i, num in enumerate(nums):
+          # Remove elements outside the window
+          while dq and dq[0] < i - k + 1:
+              dq.popleft()
+          # Remove smaller elements from the back
+          while dq and nums[dq[-1]] < num:
+              dq.pop()
+          dq.append(i)
+          # Window is full — record maximum
+          if i >= k - 1:
+              result.append(nums[dq[0]])
+      return result
+
+EXPLANATION :
+  A monotonic deque maintains indices in decreasing order of their values.
+  The front always holds the index of the maximum for the current window.
+  When the window slides, we remove expired indices from the front. When
+  a new element is larger than the back, we pop smaller elements (they can
+  never be the max while this element is in the window).
+
+TIME COMPLEXITY  : O(n) — each element enters and leaves the deque at most once
+SPACE COMPLEXITY : O(k) — deque holds at most k indices
+
+KEYWORDS : sliding window, deque, monotonic queue, maximum, O(n)
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : DSA-004
+TOPIC    : Linked Lists
+DIFFICULTY: Beginner
+--------------------------------------------------------------------------------
+QUESTION :
+What is a singly linked list? Compare it to an array for insertion and deletion.
+
+ANSWER :
+A singly linked list is a sequence of nodes where each node contains a value
+and a pointer to the next node. The last node points to None.
+
+  class Node:
+      def __init__(self, val):
+          self.val  = val
+          self.next = None
+
+  class LinkedList:
+      def __init__(self):
+          self.head = None
+
+      def prepend(self, val):       # O(1)
+          node = Node(val)
+          node.next = self.head
+          self.head = node
+
+      def append(self, val):        # O(n) — must traverse to tail
+          ...
+
+  COMPARISON:
+  OPERATION           | ARRAY  | LINKED LIST
+  --------------------|--------|------------
+  Access by index     | O(1)   | O(n)
+  Insert at head      | O(n)   | O(1)
+  Insert at tail      | O(1)*  | O(n) singly / O(1) doubly with tail pointer
+  Insert in middle    | O(n)   | O(n) find + O(1) insert
+  Delete at head      | O(n)   | O(1)
+  Delete by value     | O(n)   | O(n)
+
+  Linked lists excel when: frequent insertions/deletions at known positions
+  (no shifting). Arrays excel when: random access by index is required.
+
+KEYWORDS : linked list, node, pointer, O(1) insert, O(n) access, vs array
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : DSA-005
+TOPIC    : Linked Lists — Coding Problem
+DIFFICULTY: Intermediate
+--------------------------------------------------------------------------------
+QUESTION :
+Detect a cycle in a linked list (Floyd's Tortoise and Hare algorithm).
+
+PROBLEM STATEMENT :
+  Return True if the linked list has a cycle, False otherwise.
+  Input: 1 → 2 → 3 → 4 → 2  (4 points back to 2 — cycle)
+  Output: True
+
+PYTHON SOLUTION :
+  def has_cycle(head) -> bool:
+      slow = head
+      fast = head
+      while fast and fast.next:
+          slow = slow.next        # move 1 step
+          fast = fast.next.next   # move 2 steps
+          if slow is fast:        # pointers meet inside cycle
+              return True
+      return False                # fast reached end — no cycle
+
+EXPLANATION :
+  Two pointers start at head. Slow moves one step; fast moves two.
+  If a cycle exists, fast "laps" slow — they will eventually point to the
+  same node. If no cycle, fast reaches None. This never requires extra memory.
+
+TIME COMPLEXITY  : O(n) — at most 2n steps before meeting or exiting
+SPACE COMPLEXITY : O(1) — only two pointers
+
+KEYWORDS : cycle detection, Floyd's algorithm, tortoise hare, two pointers, O(1) space
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : DSA-006
+TOPIC    : Stacks
+DIFFICULTY: Beginner
+--------------------------------------------------------------------------------
+QUESTION :
+What is a stack and what are its key operations? Describe a real-world use
+case and implement a stack in Python.
+
+ANSWER :
+A stack is a LIFO (Last-In, First-Out) data structure. Elements are added
+and removed from the same end (the top).
+
+  KEY OPERATIONS:
+  push(x)  — add element to top       : O(1)
+  pop()    — remove and return top    : O(1)
+  peek()   — view top without removing: O(1)
+  is_empty — check if empty           : O(1)
+
+  REAL-WORLD USE CASES:
+  - Function call stack (recursion).
+  - Undo/redo in editors.
+  - Balanced bracket checking.
+  - Browser back button.
+  - Depth-First Search (DFS).
+
+  # Python implementation using a list
+  class Stack:
+      def __init__(self):
+          self._data = []
+
+      def push(self, x):
+          self._data.append(x)
+
+      def pop(self):
+          if self.is_empty():
+              raise IndexError("Pop from empty stack")
+          return self._data.pop()
+
+      def peek(self):
+          return self._data[-1]
+
+      def is_empty(self):
+          return len(self._data) == 0
+
+KEYWORDS : stack, LIFO, push, pop, peek, call stack, DFS
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : DSA-007
+TOPIC    : Stacks — Coding Problem
+DIFFICULTY: Intermediate
+--------------------------------------------------------------------------------
+QUESTION :
+Valid Parentheses: Given a string containing only '(', ')', '{', '}', '[', ']',
+determine if the input string is valid. An empty string is valid.
+
+PROBLEM STATEMENT :
+  Input:  "({[]})"   → Output: True
+  Input:  "([)]"     → Output: False
+  Input:  "{[]"      → Output: False
+
+PYTHON SOLUTION :
+  def is_valid(s: str) -> bool:
+      stack = []
+      matching = {')': '(', '}': '{', ']': '['}
+
+      for ch in s:
+          if ch in '({[':
+              stack.append(ch)
+          else:
+              if not stack or stack[-1] != matching[ch]:
+                  return False
+              stack.pop()
+
+      return len(stack) == 0    # True if all open brackets were closed
+
+EXPLANATION :
+  Push opening brackets onto the stack. For each closing bracket, check
+  if the top of the stack is its matching opener. If not, the string is
+  invalid. After processing all characters, the stack must be empty.
+
+TIME COMPLEXITY  : O(n) — one pass through the string
+SPACE COMPLEXITY : O(n) — stack holds at most n/2 openers
+
+KEYWORDS : stack, bracket matching, LIFO, hash map, O(n)
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : DSA-008
+TOPIC    : Queues
+DIFFICULTY: Beginner
+--------------------------------------------------------------------------------
+QUESTION :
+What is the difference between a queue and a deque? When would you use each?
+
+ANSWER :
+QUEUE — FIFO (First-In, First-Out). Elements enter from the rear (enqueue)
+        and exit from the front (dequeue).
+
+  from collections import deque
+  q = deque()
+  q.append(1)       # enqueue — O(1)
+  q.append(2)
+  q.popleft()       # dequeue — O(1) → returns 1
+
+  Use cases: BFS graph traversal, task scheduling, print spooler.
+
+DEQUE (Double-Ended Queue) — supports O(1) insertions and removals from
+  BOTH ends.
+
+  dq = deque()
+  dq.appendleft(0)  # insert at front — O(1)
+  dq.append(3)      # insert at back  — O(1)
+  dq.popleft()      # remove from front — O(1)
+  dq.pop()          # remove from back  — O(1)
+
+  Use cases: sliding window problems, implementing both stack and queue,
+  palindrome checking, LRU cache.
+
+  Python's collections.deque is implemented as a doubly-linked list of
+  fixed-size blocks — all four operations are O(1).
+
+KEYWORDS : queue, deque, FIFO, BFS, double-ended, collections.deque, O(1)
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : DSA-009
+TOPIC    : Hashing
+DIFFICULTY: Beginner
+--------------------------------------------------------------------------------
+QUESTION :
+How does a hash table work? What is a hash collision and how is it resolved?
+
+ANSWER :
+A hash table stores key-value pairs for O(1) average-case lookup, insert,
+and delete. It uses a HASH FUNCTION to map a key to a bucket index:
+  index = hash(key) % capacity
+
+HASH COLLISION — two different keys map to the same index.
+
+  RESOLUTION STRATEGIES:
+
+  1. CHAINING (Python's default):
+     Each bucket holds a linked list of (key, value) pairs. On collision,
+     the new pair is appended to the list. Lookup scans the list.
+     Worst case O(n) if all keys hash to one bucket.
+
+  2. OPEN ADDRESSING (linear probing):
+     On collision, probe the next available slot.
+     index = (index + 1) % capacity
+     Clustering can degrade performance.
+
+  Python dict uses open addressing with a pseudo-random probe sequence.
+  The load factor (n/capacity) is kept below 2/3; the table is resized when
+  exceeded, triggering a full rehash.
+
+  Average: O(1)  |  Worst (all collisions): O(n)
+
+KEYWORDS : hash table, hash function, collision, chaining, open addressing, load factor
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : DSA-010
+TOPIC    : Hashing — Coding Problem
+DIFFICULTY: Intermediate
+--------------------------------------------------------------------------------
+QUESTION :
+Longest Substring Without Repeating Characters: Find the length of the longest
+substring of a string that contains no repeating characters.
+
+PROBLEM STATEMENT :
+  Input:  "abcabcbb"   → Output: 3  ("abc")
+  Input:  "bbbbb"      → Output: 1  ("b")
+  Input:  "pwwkew"     → Output: 3  ("wke")
+
+PYTHON SOLUTION :
+  def length_of_longest_substring(s: str) -> int:
+      char_index = {}     # char → last seen index
+      max_len = 0
+      left = 0            # left boundary of window
+
+      for right, ch in enumerate(s):
+          if ch in char_index and char_index[ch] >= left:
+              left = char_index[ch] + 1   # shrink window past duplicate
+          char_index[ch] = right
+          max_len = max(max_len, right - left + 1)
+
+      return max_len
+
+EXPLANATION :
+  Sliding window with a hash map recording the last seen index of each
+  character. When a duplicate is found within the window, move the left
+  pointer to just after the duplicate's last occurrence. The window always
+  contains unique characters.
+
+TIME COMPLEXITY  : O(n) — each character processed once
+SPACE COMPLEXITY : O(min(n, 128)) — at most 128 ASCII characters in map
+
+KEYWORDS : sliding window, hash map, two pointers, substring, unique characters
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : DSA-011
+TOPIC    : Searching — Binary Search
+DIFFICULTY: Beginner
+--------------------------------------------------------------------------------
+QUESTION :
+Explain binary search. Implement it iteratively and state its time complexity.
+
+PROBLEM STATEMENT :
+  Given a sorted array and a target, return the index of target or -1.
+  Input:  nums = [1, 3, 5, 7, 9, 11], target = 7
+  Output: 3
+
+PYTHON SOLUTION :
+  def binary_search(nums: list[int], target: int) -> int:
+      left, right = 0, len(nums) - 1
+
+      while left <= right:
+          mid = left + (right - left) // 2   # avoids integer overflow
+          if nums[mid] == target:
+              return mid
+          elif nums[mid] < target:
+              left = mid + 1
+          else:
+              right = mid - 1
+
+      return -1
+
+EXPLANATION :
+  At each step, compare the middle element with the target. If equal, done.
+  If target is larger, discard the left half (left = mid+1). If smaller,
+  discard the right half (right = mid-1). Each iteration halves the search
+  space, giving logarithmic complexity.
+
+TIME COMPLEXITY  : O(log n)
+SPACE COMPLEXITY : O(1) — iterative uses constant extra memory
+
+KEYWORDS : binary search, sorted array, O(log n), two pointers, divide and conquer
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : DSA-012
+TOPIC    : Sorting
+DIFFICULTY: Intermediate
+--------------------------------------------------------------------------------
+QUESTION :
+Compare QuickSort, MergeSort, and HeapSort. Implement MergeSort in Python.
+
+ANSWER :
+  ALGORITHM  | AVERAGE    | WORST      | SPACE  | STABLE
+  -----------|------------|------------|--------|-------
+  QuickSort  | O(n log n) | O(n²)      | O(log n) | No
+  MergeSort  | O(n log n) | O(n log n) | O(n)   | Yes
+  HeapSort   | O(n log n) | O(n log n) | O(1)   | No
+
+  PYTHON SOLUTION (MergeSort):
+  def merge_sort(arr: list[int]) -> list[int]:
+      if len(arr) <= 1:
+          return arr
+
+      mid   = len(arr) // 2
+      left  = merge_sort(arr[:mid])
+      right = merge_sort(arr[mid:])
+      return merge(left, right)
+
+  def merge(left: list[int], right: list[int]) -> list[int]:
+      result = []
+      i = j = 0
+      while i < len(left) and j < len(right):
+          if left[i] <= right[j]:
+              result.append(left[i]); i += 1
+          else:
+              result.append(right[j]); j += 1
+      result.extend(left[i:])
+      result.extend(right[j:])
+      return result
+
+  EXPLANATION: Divide array in half recursively until single elements.
+  Merge sorted halves by comparing element by element.
+
+TIME COMPLEXITY  : O(n log n) — all cases
+SPACE COMPLEXITY : O(n) — auxiliary arrays during merge
+
+KEYWORDS : MergeSort, QuickSort, HeapSort, stable sort, O(n log n), divide and conquer
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : DSA-013
+TOPIC    : Recursion
+DIFFICULTY: Beginner
+--------------------------------------------------------------------------------
+QUESTION :
+What is recursion? Explain base case and recursive case. Implement a recursive
+function to compute the nth Fibonacci number.
+
+PROBLEM STATEMENT :
+  fib(0) = 0, fib(1) = 1, fib(n) = fib(n-1) + fib(n-2)
+  fib(6) → 8
+
+PYTHON SOLUTION (with memoisation):
+  from functools import lru_cache
+
+  @lru_cache(maxsize=None)
+  def fib(n: int) -> int:
+      if n <= 1:        # BASE CASE — stops recursion
+          return n
+      return fib(n-1) + fib(n-2)   # RECURSIVE CASE
+
+EXPLANATION :
+  Naive recursion is O(2^n) — each call spawns two more.
+  Memoisation (lru_cache) stores computed results, reducing it to O(n).
+  Each unique n is computed exactly once.
+
+  Without memoisation: fib(40) takes ~seconds.
+  With memoisation:    fib(1000) is instant.
+
+TIME COMPLEXITY  : O(n) with memoisation; O(2^n) without
+SPACE COMPLEXITY : O(n) — call stack depth + cache
+
+KEYWORDS : recursion, base case, memoisation, lru_cache, Fibonacci, call stack
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : DSA-014
+TOPIC    : Backtracking — Coding Problem
+DIFFICULTY: Advanced
+--------------------------------------------------------------------------------
+QUESTION :
+Subsets: Generate all possible subsets of a given set of distinct integers.
+
+PROBLEM STATEMENT :
+  Input:  nums = [1, 2, 3]
+  Output: [[], [1], [2], [3], [1,2], [1,3], [2,3], [1,2,3]]
+
+PYTHON SOLUTION :
+  def subsets(nums: list[int]) -> list[list[int]]:
+      result = []
+
+      def backtrack(start: int, current: list[int]):
+          result.append(current[:])    # snapshot of current state
+          for i in range(start, len(nums)):
+              current.append(nums[i])
+              backtrack(i + 1, current)  # explore with nums[i] included
+              current.pop()              # undo — backtrack
+
+      backtrack(0, [])
+      return result
+
+EXPLANATION :
+  At each call, record the current subset. Then try adding each remaining
+  element and recurse. After returning, undo the addition (backtrack) so
+  the next iteration can try a different element. This explores all 2^n
+  possibilities systematically.
+
+TIME COMPLEXITY  : O(n × 2^n) — 2^n subsets, each copied in O(n)
+SPACE COMPLEXITY : O(n) — recursion depth + current path
+
+KEYWORDS : backtracking, subsets, power set, recursion, undo, O(2^n)
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : DSA-015
+TOPIC    : Trees — Binary Tree
+DIFFICULTY: Intermediate
+--------------------------------------------------------------------------------
+QUESTION :
+What is a binary tree? Implement in-order, pre-order, and post-order
+traversals recursively.
+
+ANSWER :
+A binary tree is a tree where each node has at most two children:
+left and right.
+
+  class TreeNode:
+      def __init__(self, val=0):
+          self.val   = val
+          self.left  = None
+          self.right = None
+
+  # In-order: LEFT → ROOT → RIGHT  (gives sorted order for BST)
+  def inorder(root):
+      if root:
+          inorder(root.left)
+          print(root.val)
+          inorder(root.right)
+
+  # Pre-order: ROOT → LEFT → RIGHT  (used to copy/serialise a tree)
+  def preorder(root):
+      if root:
+          print(root.val)
+          preorder(root.left)
+          preorder(root.right)
+
+  # Post-order: LEFT → RIGHT → ROOT  (used to delete a tree)
+  def postorder(root):
+      if root:
+          postorder(root.left)
+          postorder(root.right)
+          print(root.val)
+
+  Tree traversal height: O(n) time, O(h) space where h = height.
+  Worst case (skewed tree): h = n → O(n) space.
+
+KEYWORDS : binary tree, in-order, pre-order, post-order, recursion, O(n)
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : DSA-016
+TOPIC    : Binary Search Tree — Coding Problem
+DIFFICULTY: Intermediate
+--------------------------------------------------------------------------------
+QUESTION :
+Validate Binary Search Tree: Determine if a binary tree is a valid BST.
+A valid BST has: left subtree < node < right subtree for all nodes.
+
+PROBLEM STATEMENT :
+  Input: [5, 3, 7, 1, 4]  (standard BST layout)  → True
+  Input: [5, 3, 7, 1, 6]  (6 > 5, wrong position) → False
+
+PYTHON SOLUTION :
+  def is_valid_bst(root, min_val=float('-inf'), max_val=float('inf')) -> bool:
+      if root is None:
+          return True
+      if not (min_val < root.val < max_val):
+          return False
+      return (is_valid_bst(root.left,  min_val, root.val) and
+              is_valid_bst(root.right, root.val, max_val))
+
+EXPLANATION :
+  Pass valid range [min_val, max_val] down. Every node must be strictly within
+  this range. Going left, the upper bound becomes the parent's value.
+  Going right, the lower bound becomes the parent's value. This correctly
+  catches violations deep in the tree that in-order comparison misses.
+
+TIME COMPLEXITY  : O(n) — visits every node once
+SPACE COMPLEXITY : O(h) — recursion stack, where h = tree height
+
+KEYWORDS : BST, validate, range constraint, O(n), recursion
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : DSA-017
+TOPIC    : Graphs — BFS
+DIFFICULTY: Intermediate
+--------------------------------------------------------------------------------
+QUESTION :
+Implement Breadth-First Search (BFS) on a graph. What is it used for?
+
+PROBLEM STATEMENT :
+  Find the shortest path (in edges) from source to target in an unweighted graph.
+  graph = {0:[1,2], 1:[0,3], 2:[0,3,4], 3:[1,2,5], 4:[2,5], 5:[3,4]}
+  Shortest path from 0 to 5 → [0, 2, 4, 5] or [0, 2, 3, 5] (length 3)
+
+PYTHON SOLUTION :
+  from collections import deque
+
+  def bfs_shortest_path(graph: dict, source: int, target: int):
+      visited = {source}
+      queue   = deque([(source, [source])])    # (node, path so far)
+
+      while queue:
+          node, path = queue.popleft()
+          if node == target:
+              return path
+          for neighbour in graph[node]:
+              if neighbour not in visited:
+                  visited.add(neighbour)
+                  queue.append((neighbour, path + [neighbour]))
+      return None   # no path found
+
+EXPLANATION :
+  BFS explores level by level (all neighbours before going deeper).
+  The first time a node is reached it is via the shortest path (fewest edges).
+
+  USE CASES: shortest path in unweighted graph, social network distance,
+  web crawling level-by-level, puzzle solving (15-puzzle, word ladder).
+
+TIME COMPLEXITY  : O(V + E) — V vertices, E edges
+SPACE COMPLEXITY : O(V) — queue and visited set
+
+KEYWORDS : BFS, shortest path, queue, level-order, O(V+E), unweighted graph
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : DSA-018
+TOPIC    : Graphs — DFS
+DIFFICULTY: Intermediate
+--------------------------------------------------------------------------------
+QUESTION :
+Implement Depth-First Search (DFS) on a graph. Detect if a cycle exists in
+a directed graph.
+
+PYTHON SOLUTION :
+  def has_cycle_directed(graph: dict) -> bool:
+      """
+      Returns True if the directed graph contains a cycle.
+      Uses DFS with 'visiting' set (grey node detection).
+      """
+      visited  = set()    # fully processed nodes (black)
+      visiting = set()    # currently in the DFS stack (grey)
+
+      def dfs(node):
+          visiting.add(node)
+          for neighbour in graph.get(node, []):
+              if neighbour in visiting:   # back edge → cycle
+                  return True
+              if neighbour not in visited:
+                  if dfs(neighbour):
+                      return True
+          visiting.discard(node)
+          visited.add(node)
+          return False
+
+      for node in graph:
+          if node not in visited:
+              if dfs(node):
+                  return True
+      return False
+
+EXPLANATION :
+  Maintain two sets: visiting (grey — currently on the stack) and visited
+  (black — fully explored). A back edge (to a grey node) indicates a cycle.
+
+TIME COMPLEXITY  : O(V + E)
+SPACE COMPLEXITY : O(V) — recursion stack + sets
+
+KEYWORDS : DFS, cycle detection, directed graph, grey-white-black, back edge, O(V+E)
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : DSA-019
+TOPIC    : Greedy Algorithms
+DIFFICULTY: Intermediate
+--------------------------------------------------------------------------------
+QUESTION :
+What is a greedy algorithm? Implement the Activity Selection Problem.
+
+PROBLEM STATEMENT :
+  Given a list of activities with start and end times, select the maximum
+  number of non-overlapping activities.
+  activities = [(1,4), (3,5), (0,6), (5,7), (3,8), (5,9), (6,10), (8,11)]
+  Output: 4  (e.g., (1,4), (5,7), (8,11) and one more)
+
+PYTHON SOLUTION :
+  def activity_selection(activities: list[tuple]) -> int:
+      # Sort by finish time — greedy choice
+      sorted_acts = sorted(activities, key=lambda x: x[1])
+      count        = 1
+      last_end     = sorted_acts[0][1]
+
+      for start, end in sorted_acts[1:]:
+          if start >= last_end:       # no overlap
+              count   += 1
+              last_end = end
+
+      return count
+
+EXPLANATION :
+  Always select the activity that finishes earliest — this leaves the most
+  room for remaining activities. Proof of optimality: any solution can be
+  converted to the greedy solution without reducing the count.
+
+TIME COMPLEXITY  : O(n log n) — dominated by sorting
+SPACE COMPLEXITY : O(1) — no extra data structures
+
+KEYWORDS : greedy, activity selection, finish time, sorting, O(n log n), optimal
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : DSA-020
+TOPIC    : Dynamic Programming — Beginner
+DIFFICULTY: Intermediate
+--------------------------------------------------------------------------------
+QUESTION :
+Explain dynamic programming (DP). What are memoisation and tabulation?
+Implement the Coin Change problem.
+
+PROBLEM STATEMENT :
+  Given coins of certain denominations and an amount, find the minimum
+  number of coins to make that amount. Return -1 if impossible.
+  coins = [1, 5, 6, 9], amount = 11
+  Output: 2  (5 + 6)
+
+PYTHON SOLUTION (bottom-up tabulation):
+  def coin_change(coins: list[int], amount: int) -> int:
+      dp = [float('inf')] * (amount + 1)
+      dp[0] = 0   # 0 coins needed for amount 0
+
+      for amt in range(1, amount + 1):
+          for coin in coins:
+              if coin <= amt:
+                  dp[amt] = min(dp[amt], dp[amt - coin] + 1)
+
+      return dp[amount] if dp[amount] != float('inf') else -1
+
+EXPLANATION :
+  dp[i] = minimum coins for amount i. For each amount, try every coin.
+  If we use coin c, we need dp[i-c] + 1 coins. Build answers from 0 upward.
+  This is TABULATION — fill a table bottom-up.
+  MEMOISATION — top-down recursion with a cache (same complexity, different style).
+
+TIME COMPLEXITY  : O(amount × len(coins))
+SPACE COMPLEXITY : O(amount) — dp array
+
+KEYWORDS : dynamic programming, memoisation, tabulation, coin change, O(n*k)
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : DSA-021
+TOPIC    : Dynamic Programming — 2D
+DIFFICULTY: Advanced
+--------------------------------------------------------------------------------
+QUESTION :
+Implement the Longest Common Subsequence (LCS) using dynamic programming.
+
+PROBLEM STATEMENT :
+  Input:  s1 = "ABCBDAB", s2 = "BDCABA"
+  Output: 4  (LCS = "BCBA" or "BDAB")
+
+PYTHON SOLUTION :
+  def lcs(s1: str, s2: str) -> int:
+      m, n  = len(s1), len(s2)
+      dp    = [[0] * (n + 1) for _ in range(m + 1)]
+
+      for i in range(1, m + 1):
+          for j in range(1, n + 1):
+              if s1[i-1] == s2[j-1]:
+                  dp[i][j] = dp[i-1][j-1] + 1        # match
+              else:
+                  dp[i][j] = max(dp[i-1][j], dp[i][j-1])  # skip
+
+      return dp[m][n]
+
+  # Reconstruct the LCS string (trace back through dp table)
+  def lcs_string(s1: str, s2: str) -> str:
+      m, n = len(s1), len(s2)
+      dp   = [[0]*(n+1) for _ in range(m+1)]
+      for i in range(1,m+1):
+          for j in range(1,n+1):
+              if s1[i-1]==s2[j-1]: dp[i][j]=dp[i-1][j-1]+1
+              else: dp[i][j]=max(dp[i-1][j],dp[i][j-1])
+      result=[]
+      i,j=m,n
+      while i>0 and j>0:
+          if s1[i-1]==s2[j-1]: result.append(s1[i-1]);i-=1;j-=1
+          elif dp[i-1][j]>dp[i][j-1]: i-=1
+          else: j-=1
+      return "".join(reversed(result))
+
+EXPLANATION :
+  dp[i][j] = LCS length of s1[:i] and s2[:j]. If characters match,
+  extend the LCS of the prefix pair. Otherwise, take the maximum of
+  skipping one character from either string.
+
+TIME COMPLEXITY  : O(m × n)
+SPACE COMPLEXITY : O(m × n) — can be reduced to O(min(m,n)) with optimisation
+
+KEYWORDS : LCS, dynamic programming, 2D DP, subsequence, O(mn), backtracking
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : DSA-022
+TOPIC    : Dynamic Programming — Knapsack
+DIFFICULTY: Advanced
+--------------------------------------------------------------------------------
+QUESTION :
+Solve the 0/1 Knapsack problem using dynamic programming.
+
+PROBLEM STATEMENT :
+  Items = [(weight=2, value=6), (weight=2, value=10), (weight=3, value=12)]
+  Capacity = 5
+  Output: 22  (take items 2 and 3: weight 2+3=5, value 10+12=22)
+
+PYTHON SOLUTION :
+  def knapsack(capacity: int, weights: list, values: list) -> int:
+      n  = len(weights)
+      dp = [[0] * (capacity + 1) for _ in range(n + 1)]
+
+      for i in range(1, n + 1):
+          for w in range(capacity + 1):
+              # Don't take item i
+              dp[i][w] = dp[i-1][w]
+              # Take item i (if it fits)
+              if weights[i-1] <= w:
+                  dp[i][w] = max(dp[i][w],
+                                 dp[i-1][w - weights[i-1]] + values[i-1])
+
+      return dp[n][capacity]
+
+EXPLANATION :
+  dp[i][w] = max value using first i items with capacity w.
+  For each item, decide: skip it (take dp[i-1][w]) or include it
+  (take dp[i-1][w-weight] + value) — whichever is greater.
+
+TIME COMPLEXITY  : O(n × W) — n items, W capacity
+SPACE COMPLEXITY : O(n × W) — reduce to O(W) by using 1D dp array
+
+KEYWORDS : knapsack, 0/1, dynamic programming, capacity, O(nW)
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : DSA-023
+TOPIC    : Time & Space Complexity
+DIFFICULTY: Beginner
+--------------------------------------------------------------------------------
+QUESTION :
+Explain Big O notation. What is the difference between O(1), O(log n), O(n),
+O(n log n), and O(n²)?
+
+ANSWER :
+Big O notation describes how the running time (or space) of an algorithm
+grows as the input size n increases, in the worst case.
+
+  O(1)       — Constant time. Doesn't grow with n.
+               Example: array access list[i], dictionary lookup.
+
+  O(log n)   — Logarithmic. Halves the problem each step.
+               Example: binary search, balanced BST lookup.
+
+  O(n)       — Linear. Proportional to input size.
+               Example: linear search, single loop over array.
+
+  O(n log n) — Linearithmic. Optimal for comparison-based sorting.
+               Example: MergeSort, HeapSort, TimSort.
+
+  O(n²)      — Quadratic. Nested loops.
+               Example: bubble sort, insertion sort (worst case).
+
+  O(2^n)     — Exponential. Doubles with each element added.
+               Example: naive subset generation, brute-force travelling salesman.
+
+  GROWTH ORDER (slowest → fastest):
+  O(1) < O(log n) < O(√n) < O(n) < O(n log n) < O(n²) < O(n³) < O(2^n) < O(n!)
+
+  For n = 1,000,000:
+  O(log n)   ≈ 20 operations
+  O(n)       ≈ 1,000,000 operations
+  O(n²)      ≈ 1,000,000,000,000 operations (impractical)
+
+KEYWORDS : Big O, time complexity, space complexity, O(1), O(n log n), growth rate
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : DSA-024
+TOPIC    : Graphs — Shortest Path
+DIFFICULTY: Advanced
+--------------------------------------------------------------------------------
+QUESTION :
+Explain Dijkstra's algorithm. Implement it for finding the shortest path in a
+weighted graph with non-negative weights.
+
+PROBLEM STATEMENT :
+  graph = {
+    0: [(1,4),(2,1)], 1: [(3,1)], 2: [(1,2),(3,5)], 3: []
+  }  # (neighbour, weight)
+  Shortest path from 0 to 3: 0→2→1→3, total weight = 1+2+1 = 4
+
+PYTHON SOLUTION :
+  import heapq
+
+  def dijkstra(graph: dict, source: int) -> dict:
+      dist = {node: float('inf') for node in graph}
+      dist[source] = 0
+      heap = [(0, source)]   # (distance, node)
+
+      while heap:
+          d, u = heapq.heappop(heap)
+          if d > dist[u]:    # stale entry — skip
+              continue
+          for v, weight in graph[u]:
+              new_dist = dist[u] + weight
+              if new_dist < dist[v]:
+                  dist[v] = new_dist
+                  heapq.heappush(heap, (new_dist, v))
+
+      return dist   # dist[node] = shortest distance from source
+
+EXPLANATION :
+  A min-heap always processes the closest unvisited node. For each neighbour,
+  relax the edge (update dist if shorter path found). Stale heap entries
+  (where d > dist[u]) are skipped. Works correctly only with non-negative weights.
+
+TIME COMPLEXITY  : O((V + E) log V) with a binary heap
+SPACE COMPLEXITY : O(V + E)
+
+KEYWORDS : Dijkstra, shortest path, weighted graph, min-heap, heapq, relaxation
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : DSA-025
+TOPIC    : Trees — Heap / Priority Queue
+DIFFICULTY: Advanced
+--------------------------------------------------------------------------------
+QUESTION :
+What is a heap? How does heapq work in Python? Implement the K Largest
+Elements problem.
+
+PROBLEM STATEMENT :
+  Input:  nums = [3, 2, 1, 5, 6, 4], k = 2
+  Output: [6, 5]  (the two largest elements)
+
+PYTHON SOLUTION (min-heap of size k):
+  import heapq
+
+  def k_largest(nums: list[int], k: int) -> list[int]:
+      # Maintain a min-heap of size k
+      # The smallest in the heap is the "gate" — anything smaller is excluded
+      heap = nums[:k]
+      heapq.heapify(heap)            # O(k)
+
+      for num in nums[k:]:
+          if num > heap[0]:          # larger than current minimum
+              heapq.heapreplace(heap, num)  # pop min, push new — O(log k)
+
+      return sorted(heap, reverse=True)
+
+EXPLANATION :
+  Python's heapq is a MIN-heap. We maintain a heap of exactly k elements.
+  The root (heap[0]) is the smallest of the k largest seen so far.
+  If a new element is larger than the root, it displaces the root.
+  After processing all elements, the heap contains the k largest.
+
+  ALTERNATIVE: heapq.nlargest(k, nums) — simpler but O(n log k).
+
+TIME COMPLEXITY  : O(n log k) — n elements, each heap operation is O(log k)
+SPACE COMPLEXITY : O(k) — heap size
+
+KEYWORDS : heap, min-heap, heapq, k largest, priority queue, O(n log k)
+
+================================================================================
+END OF FILE — DSA_Interview_QA.txt — 25 Questions
+================================================================================

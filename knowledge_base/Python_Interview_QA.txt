@@ -1,0 +1,813 @@
+================================================================================
+FILE      : Python_Interview_QA.txt
+SUBJECT   : Python Programming — Interview Questions & Answers
+QUESTIONS : 20
+LEVELS    : Beginner (8) | Intermediate (7) | Advanced (5)
+PROJECT   : InterviewMate AI — IBM SkillsBuild AICTE-2026
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : PY-001
+TOPIC    : Data Types & Variables
+DIFFICULTY: Beginner
+--------------------------------------------------------------------------------
+QUESTION :
+What is the difference between a list, a tuple, and a set in Python?
+
+ANSWER :
+All three are built-in collection types, but they differ in mutability, order,
+and uniqueness:
+
+  LIST   — Ordered, mutable, allows duplicates.
+           my_list = [1, 2, 2, 3]  # elements can be changed after creation
+
+  TUPLE  — Ordered, immutable, allows duplicates.
+           my_tuple = (1, 2, 2, 3)  # cannot be changed after creation
+           Tuples are faster to iterate and are used as dictionary keys.
+
+  SET    — Unordered, mutable, no duplicates.
+           my_set = {1, 2, 3}  # automatically removes duplicates
+
+Use a list when order matters and data changes. Use a tuple for fixed data (e.g.,
+coordinates). Use a set for membership testing and deduplication.
+
+KEYWORDS : mutability, ordered, hashable, iterable, deduplication
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : PY-002
+TOPIC    : String Operations
+DIFFICULTY: Beginner
+--------------------------------------------------------------------------------
+QUESTION :
+How are strings immutable in Python, and what does that mean practically?
+
+ANSWER :
+In Python, once a string object is created its contents cannot be changed in
+place. Any operation that appears to modify a string actually creates a new
+string object.
+
+  s = "hello"
+  s[0] = "H"          # TypeError: 'str' object does not support item assignment
+  s = s.upper()       # correct — creates a new string "HELLO"
+
+Practical implications:
+  - String concatenation inside a loop is O(n²) — use ''.join() instead.
+  - Strings are hashable and can be used as dictionary keys.
+  - String interning allows CPython to reuse small string objects safely.
+
+  # Efficient concatenation
+  parts = ["Hello", " ", "World"]
+  result = "".join(parts)  # O(n), single allocation
+
+KEYWORDS : immutability, interning, hashable, join, memory allocation
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : PY-003
+TOPIC    : Functions & Scope
+DIFFICULTY: Beginner
+--------------------------------------------------------------------------------
+QUESTION :
+Explain the LEGB rule for variable scope in Python.
+
+ANSWER :
+LEGB stands for the order Python uses to resolve variable names:
+
+  L — Local     : Variables defined inside the current function.
+  E — Enclosing : Variables in the enclosing function's scope (for nested
+                  functions / closures).
+  G — Global    : Variables defined at the module level.
+  B — Built-in  : Python's built-in names (len, print, range, etc.).
+
+  x = "global"
+
+  def outer():
+      x = "enclosing"
+      def inner():
+          x = "local"
+          print(x)   # prints "local" — Local wins
+      inner()
+      print(x)       # prints "enclosing"
+
+  outer()
+  print(x)           # prints "global"
+
+The 'global' keyword promotes a local assignment to global scope.
+The 'nonlocal' keyword promotes a local assignment to the nearest enclosing scope.
+
+KEYWORDS : scope, closure, global, nonlocal, namespace, LEGB
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : PY-004
+TOPIC    : OOP — Classes
+DIFFICULTY: Beginner
+--------------------------------------------------------------------------------
+QUESTION :
+What is the difference between instance methods, class methods, and static
+methods in Python?
+
+ANSWER :
+  INSTANCE METHOD  — Takes 'self' as the first parameter. Has access to the
+                     specific instance and its attributes.
+
+  CLASS METHOD     — Decorated with @classmethod. Takes 'cls' as first parameter.
+                     Has access to the class itself but not to any specific
+                     instance. Used as alternative constructors.
+
+  STATIC METHOD    — Decorated with @staticmethod. Takes no implicit first
+                     parameter. It is a plain function that belongs to the
+                     class's namespace for organisational clarity.
+
+  class Temperature:
+      scale = "Celsius"
+
+      def __init__(self, value):
+          self.value = value
+
+      def display(self):                        # instance method
+          return f"{self.value}° {self.scale}"
+
+      @classmethod
+      def from_fahrenheit(cls, f):              # class method (alt constructor)
+          return cls((f - 32) * 5 / 9)
+
+      @staticmethod
+      def is_freezing(temp):                    # static method
+          return temp <= 0
+
+KEYWORDS : self, cls, @classmethod, @staticmethod, constructor, OOP
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : PY-005
+TOPIC    : Error Handling
+DIFFICULTY: Beginner
+--------------------------------------------------------------------------------
+QUESTION :
+Explain try, except, else, and finally in Python exception handling.
+
+ANSWER :
+  try     — Code that may raise an exception.
+  except  — Runs if the specified exception is raised.
+  else    — Runs only if NO exception was raised in try.
+  finally — Always runs regardless of whether an exception occurred.
+
+  def divide(a, b):
+      try:
+          result = a / b
+      except ZeroDivisionError:
+          print("Cannot divide by zero.")
+          return None
+      except TypeError as e:
+          print(f"Type error: {e}")
+          return None
+      else:
+          print("Division successful.")
+          return result
+      finally:
+          print("Execution complete.")   # always runs
+
+  divide(10, 2)   # prints "Division successful." then "Execution complete."
+  divide(10, 0)   # prints "Cannot divide by zero." then "Execution complete."
+
+Best practice: catch specific exceptions, not bare 'except:'. Use 'finally'
+for cleanup (closing files, releasing locks).
+
+KEYWORDS : exception, ZeroDivisionError, TypeError, finally, else, cleanup
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : PY-006
+TOPIC    : Comprehensions
+DIFFICULTY: Beginner
+--------------------------------------------------------------------------------
+QUESTION :
+What are list comprehensions and dictionary comprehensions? When should you
+prefer them over loops?
+
+ANSWER :
+Comprehensions provide a concise, readable syntax for creating lists or dicts
+from iterables.
+
+  # List comprehension
+  squares = [x**2 for x in range(10) if x % 2 == 0]
+  # [0, 4, 16, 36, 64]
+
+  # Equivalent for-loop
+  squares = []
+  for x in range(10):
+      if x % 2 == 0:
+          squares.append(x**2)
+
+  # Dictionary comprehension
+  word_lengths = {w: len(w) for w in ["apple", "banana", "cherry"]}
+  # {'apple': 5, 'banana': 6, 'cherry': 6}
+
+  # Set comprehension
+  unique_lengths = {len(w) for w in ["apple", "banana", "cherry"]}
+
+Prefer comprehensions when: the logic is simple and fits on one line.
+Avoid them when: the logic requires multiple conditions, side effects, or
+nested comprehensions deeper than two levels (hurts readability).
+
+KEYWORDS : comprehension, list, dict, set, generator expression, readability
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : PY-007
+TOPIC    : File I/O
+DIFFICULTY: Beginner
+--------------------------------------------------------------------------------
+QUESTION :
+How do you read and write files safely in Python? What does the 'with' statement
+do?
+
+ANSWER :
+The 'with' statement uses a context manager to ensure the file is closed
+automatically even if an exception occurs, preventing resource leaks.
+
+  # Writing
+  with open("data.txt", "w", encoding="utf-8") as f:
+      f.write("Hello, InterviewMate!\n")
+
+  # Reading entire file
+  with open("data.txt", "r", encoding="utf-8") as f:
+      content = f.read()
+
+  # Reading line by line (memory-efficient for large files)
+  with open("data.txt", "r", encoding="utf-8") as f:
+      for line in f:
+          print(line.strip())
+
+  # Appending
+  with open("data.txt", "a", encoding="utf-8") as f:
+      f.write("New line\n")
+
+File modes: 'r' (read), 'w' (write, truncates), 'a' (append), 'b' (binary),
+'x' (exclusive creation). Always specify encoding='utf-8' to avoid platform
+differences.
+
+KEYWORDS : context manager, __enter__, __exit__, encoding, resource management
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : PY-008
+TOPIC    : Modules & Packages
+DIFFICULTY: Beginner
+--------------------------------------------------------------------------------
+QUESTION :
+What is the difference between a module and a package in Python?
+
+ANSWER :
+  MODULE  — A single .py file containing Python definitions and statements.
+            Imported with: import math  or  from math import sqrt
+
+  PACKAGE — A directory containing an __init__.py file and one or more modules.
+            __init__.py marks the directory as a Python package and can contain
+            initialisation code.
+
+  mypackage/
+      __init__.py
+      utils.py
+      models.py
+
+  from mypackage.utils import helper_function
+
+Python 3.3+ also supports "namespace packages" (directories without __init__.py),
+but explicit __init__.py is the conventional and recommended approach.
+
+The __init__.py controls what is exported when a user writes:
+  from mypackage import *   # uses __all__ list if defined
+
+KEYWORDS : module, package, __init__.py, import, namespace, __all__
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : PY-009
+TOPIC    : Decorators
+DIFFICULTY: Intermediate
+--------------------------------------------------------------------------------
+QUESTION :
+What is a Python decorator? Write a decorator that measures the execution time
+of any function.
+
+ANSWER :
+A decorator is a callable that takes a function as input, adds behaviour around
+it, and returns a new callable — typically implemented as a higher-order function
+using closures.
+
+  import time
+  import functools
+
+  def timer(func):
+      @functools.wraps(func)    # preserves original function metadata
+      def wrapper(*args, **kwargs):
+          start = time.perf_counter()
+          result = func(*args, **kwargs)
+          elapsed = time.perf_counter() - start
+          print(f"{func.__name__} took {elapsed:.4f}s")
+          return result
+      return wrapper
+
+  @timer
+  def compute_sum(n):
+      return sum(range(n))
+
+  compute_sum(1_000_000)
+  # compute_sum took 0.0312s
+
+@functools.wraps is essential — without it, func.__name__ and func.__doc__
+would reflect 'wrapper', not the original function.
+
+KEYWORDS : higher-order function, closure, functools.wraps, @decorator, __name__
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : PY-010
+TOPIC    : Generators & Iterators
+DIFFICULTY: Intermediate
+--------------------------------------------------------------------------------
+QUESTION :
+What is the difference between a generator and a regular function? Why would
+you use a generator?
+
+ANSWER :
+A regular function executes completely and returns a value. A generator function
+uses 'yield' to produce values one at a time, suspending its execution between
+yields. It returns a generator object (an iterator).
+
+  # Regular function — loads all data into memory
+  def read_all_lines(filename):
+      with open(filename) as f:
+          return f.readlines()   # entire file in memory
+
+  # Generator — memory-efficient, processes one line at a time
+  def read_lines(filename):
+      with open(filename) as f:
+          for line in f:
+              yield line.strip()  # suspends here, resumes on next()
+
+  for line in read_lines("large_file.txt"):
+      process(line)
+
+Generator expressions are even more concise:
+  total = sum(x**2 for x in range(1_000_000))  # no list created
+
+  Use generators when:
+  - The dataset is too large to fit in memory.
+  - You only need to iterate once.
+  - You want lazy evaluation (compute values on demand).
+
+KEYWORDS : yield, iterator, lazy evaluation, memory efficiency, StopIteration
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : PY-011
+TOPIC    : OOP — Inheritance & Polymorphism
+DIFFICULTY: Intermediate
+--------------------------------------------------------------------------------
+QUESTION :
+Explain method resolution order (MRO) in Python and why it matters with
+multiple inheritance.
+
+ANSWER :
+MRO defines the order in which Python searches for a method when it is called
+on an object. Python uses the C3 linearisation algorithm to compute MRO.
+
+  class A:
+      def greet(self): return "A"
+
+  class B(A):
+      def greet(self): return "B"
+
+  class C(A):
+      def greet(self): return "C"
+
+  class D(B, C):
+      pass
+
+  d = D()
+  print(d.greet())      # "B"  — follows MRO
+  print(D.__mro__)
+  # (<class 'D'>, <class 'B'>, <class 'C'>, <class 'A'>, <class 'object'>)
+
+Python searches: D → B → C → A → object (left-to-right, depth-first with
+de-duplication). super() respects MRO, enabling cooperative multiple
+inheritance where each class in the chain calls the next.
+
+KEYWORDS : MRO, C3 linearisation, super(), multiple inheritance, diamond problem
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : PY-012
+TOPIC    : Context Managers
+DIFFICULTY: Intermediate
+--------------------------------------------------------------------------------
+QUESTION :
+How do you create a custom context manager in Python? Show both the class-based
+and the generator-based approaches.
+
+ANSWER :
+A context manager must implement __enter__ and __exit__ methods.
+
+  # Class-based approach
+  class ManagedResource:
+      def __init__(self, name):
+          self.name = name
+
+      def __enter__(self):
+          print(f"Acquiring {self.name}")
+          return self          # value bound to 'as' variable
+
+      def __exit__(self, exc_type, exc_val, exc_tb):
+          print(f"Releasing {self.name}")
+          return False         # False = don't suppress exceptions
+
+  with ManagedResource("database connection") as r:
+      print(f"Using {r.name}")
+
+  # Generator-based approach using contextlib
+  from contextlib import contextmanager
+
+  @contextmanager
+  def managed_resource(name):
+      print(f"Acquiring {name}")
+      try:
+          yield name           # code inside 'with' block runs here
+      finally:
+          print(f"Releasing {name}")
+
+  with managed_resource("file handle") as r:
+      print(f"Using {r}")
+
+KEYWORDS : __enter__, __exit__, contextlib, @contextmanager, resource management
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : PY-013
+TOPIC    : Functional Programming
+DIFFICULTY: Intermediate
+--------------------------------------------------------------------------------
+QUESTION :
+Explain map(), filter(), and reduce() in Python with examples.
+
+ANSWER :
+These are functional programming tools for transforming and aggregating
+iterables without explicit loops.
+
+  from functools import reduce
+
+  numbers = [1, 2, 3, 4, 5, 6]
+
+  # map(func, iterable) — applies func to every element, returns iterator
+  squared = list(map(lambda x: x**2, numbers))
+  # [1, 4, 9, 16, 25, 36]
+
+  # filter(func, iterable) — keeps elements where func returns True
+  evens = list(filter(lambda x: x % 2 == 0, numbers))
+  # [2, 4, 6]
+
+  # reduce(func, iterable) — accumulates to a single value
+  product = reduce(lambda acc, x: acc * x, numbers)
+  # 720  (1×2×3×4×5×6)
+
+In modern Python, list comprehensions and generator expressions are generally
+preferred over map/filter for readability. reduce was moved to functools in
+Python 3 to discourage overuse.
+
+KEYWORDS : map, filter, reduce, lambda, functools, functional programming
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : PY-014
+TOPIC    : Concurrency
+DIFFICULTY: Intermediate
+--------------------------------------------------------------------------------
+QUESTION :
+What is the GIL in Python, and how do threading and multiprocessing differ
+in handling it?
+
+ANSWER :
+The Global Interpreter Lock (GIL) is a mutex in CPython that allows only one
+thread to execute Python bytecode at a time, even on multi-core processors.
+
+  THREADING     — Threads share the same GIL. The GIL is released during I/O
+  (threading)     operations (network, file), so threading is effective for
+                  I/O-bound tasks.
+
+  MULTIPROCESSING — Each process has its own Python interpreter and GIL.
+  (multiprocessing) True parallelism is achieved. Suitable for CPU-bound work
+                    (number crunching, image processing).
+
+  # I/O-bound: use threading
+  import threading
+  threads = [threading.Thread(target=fetch_url, args=(url,)) for url in urls]
+
+  # CPU-bound: use multiprocessing
+  from multiprocessing import Pool
+  with Pool(processes=4) as pool:
+      results = pool.map(heavy_computation, data)
+
+asyncio is a third option: single-threaded cooperative concurrency for
+high-volume I/O using an event loop, avoiding thread overhead entirely.
+
+KEYWORDS : GIL, threading, multiprocessing, asyncio, I/O-bound, CPU-bound
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : PY-015
+TOPIC    : Memory Management
+DIFFICULTY: Intermediate
+--------------------------------------------------------------------------------
+QUESTION :
+How does Python manage memory? Explain reference counting and the garbage
+collector.
+
+ANSWER :
+Python uses two mechanisms:
+
+  1. REFERENCE COUNTING
+     Every object maintains a count of references pointing to it. When the
+     count drops to zero, the memory is immediately freed.
+
+     import sys
+     a = [1, 2, 3]
+     print(sys.getrefcount(a))   # typically 2 (a + getrefcount's arg)
+     b = a
+     print(sys.getrefcount(a))   # 3
+
+  2. CYCLIC GARBAGE COLLECTOR
+     Reference counting cannot handle reference cycles (A → B → A). Python's
+     gc module runs a cyclic collector that detects and breaks these cycles.
+
+     import gc
+     gc.collect()   # manually trigger collection
+
+  Memory optimisation techniques:
+  - Use __slots__ to reduce per-instance dict overhead.
+  - Use generators instead of lists for large sequences.
+  - Use weakref for cache objects to avoid preventing garbage collection.
+
+KEYWORDS : reference counting, gc, garbage collection, __slots__, weakref, memory
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : PY-016
+TOPIC    : Metaclasses
+DIFFICULTY: Advanced
+--------------------------------------------------------------------------------
+QUESTION :
+What is a metaclass in Python, and when would you use one?
+
+ANSWER :
+A metaclass is the "class of a class" — it controls how classes are created,
+just as a class controls how instances are created. The default metaclass is
+'type'.
+
+  # Everything is an object; classes are instances of type
+  print(type(int))     # <class 'type'>
+  print(type(list))    # <class 'type'>
+
+  # Custom metaclass
+  class SingletonMeta(type):
+      _instances = {}
+
+      def __call__(cls, *args, **kwargs):
+          if cls not in cls._instances:
+              cls._instances[cls] = super().__call__(*args, **kwargs)
+          return cls._instances[cls]
+
+  class Config(metaclass=SingletonMeta):
+      def __init__(self):
+          self.debug = False
+
+  c1 = Config()
+  c2 = Config()
+  print(c1 is c2)   # True — same instance
+
+  Common uses: ORMs (Django models), API registries, enforcing interfaces,
+  automatic property generation, singleton pattern.
+
+KEYWORDS : metaclass, type, __call__, singleton, ORM, class creation
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : PY-017
+TOPIC    : Descriptors
+DIFFICULTY: Advanced
+--------------------------------------------------------------------------------
+QUESTION :
+What are Python descriptors? How do @property and @staticmethod use them
+internally?
+
+ANSWER :
+A descriptor is any object that defines __get__, __set__, or __delete__. When
+an attribute lookup finds a descriptor in the class (not the instance), Python
+calls the descriptor's protocol methods instead of returning the object directly.
+
+  class Validated:
+      """Descriptor that enforces a positive number."""
+      def __set_name__(self, owner, name):
+          self.name = name
+
+      def __get__(self, obj, objtype=None):
+          if obj is None:
+              return self
+          return obj.__dict__.get(self.name)
+
+      def __set__(self, obj, value):
+          if value < 0:
+              raise ValueError(f"{self.name} must be non-negative.")
+          obj.__dict__[self.name] = value
+
+  class Product:
+      price = Validated()
+      quantity = Validated()
+
+      def __init__(self, price, quantity):
+          self.price = price
+          self.quantity = quantity
+
+  p = Product(10.0, 5)
+  p.price = -1   # ValueError: price must be non-negative.
+
+@property is implemented as a built-in descriptor. @staticmethod wraps a
+function in a non-data descriptor that skips 'self'/'cls' injection.
+
+KEYWORDS : descriptor, __get__, __set__, __set_name__, property, data descriptor
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : PY-018
+TOPIC    : asyncio
+DIFFICULTY: Advanced
+--------------------------------------------------------------------------------
+QUESTION :
+Explain Python's asyncio model. Write an example of fetching multiple URLs
+concurrently using async/await.
+
+ANSWER :
+asyncio implements single-threaded cooperative concurrency using an event loop.
+Coroutines (async def functions) yield control back to the loop with 'await',
+allowing other coroutines to run while waiting for I/O.
+
+  import asyncio
+  import aiohttp   # pip install aiohttp
+
+  async def fetch(session, url):
+      async with session.get(url) as response:
+          return await response.text()
+
+  async def fetch_all(urls):
+      async with aiohttp.ClientSession() as session:
+          tasks = [fetch(session, url) for url in urls]
+          results = await asyncio.gather(*tasks)   # run all concurrently
+      return results
+
+  urls = [
+      "https://httpbin.org/delay/1",
+      "https://httpbin.org/delay/1",
+      "https://httpbin.org/delay/1",
+  ]
+
+  # Sequential: ~3 seconds  |  Concurrent with asyncio: ~1 second
+  asyncio.run(fetch_all(urls))
+
+Key concepts: event loop, coroutine, task, asyncio.gather, async with/for.
+asyncio does NOT achieve CPU parallelism — use multiprocessing for that.
+
+KEYWORDS : asyncio, event loop, coroutine, await, gather, aiohttp, I/O-bound
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : PY-019
+TOPIC    : Design Patterns
+DIFFICULTY: Advanced
+--------------------------------------------------------------------------------
+QUESTION :
+Implement the Observer design pattern in Python.
+
+ANSWER :
+The Observer pattern defines a one-to-many dependency: when an object (subject)
+changes state, all its dependents (observers) are notified automatically.
+
+  from abc import ABC, abstractmethod
+
+  class Observer(ABC):
+      @abstractmethod
+      def update(self, event: str, data):
+          pass
+
+  class Subject:
+      def __init__(self):
+          self._observers: list[Observer] = []
+          self._state = None
+
+      def subscribe(self, observer: Observer):
+          self._observers.append(observer)
+
+      def unsubscribe(self, observer: Observer):
+          self._observers.remove(observer)
+
+      def notify(self, event: str):
+          for observer in self._observers:
+              observer.update(event, self._state)
+
+      def set_state(self, state):
+          self._state = state
+          self.notify("state_changed")
+
+  class Logger(Observer):
+      def update(self, event, data):
+          print(f"[LOG] Event: {event}, Data: {data}")
+
+  class Emailer(Observer):
+      def update(self, event, data):
+          print(f"[EMAIL] Sending alert for event: {event}, value: {data}")
+
+  sensor = Subject()
+  sensor.subscribe(Logger())
+  sensor.subscribe(Emailer())
+  sensor.set_state(42)
+  # [LOG] Event: state_changed, Data: 42
+  # [EMAIL] Sending alert for event: state_changed, value: 42
+
+KEYWORDS : observer, subject, design pattern, ABC, abstractmethod, event-driven
+
+================================================================================
+
+--------------------------------------------------------------------------------
+ID       : PY-020
+TOPIC    : Testing
+DIFFICULTY: Advanced
+--------------------------------------------------------------------------------
+QUESTION :
+How do you write unit tests in Python using unittest and pytest? What is
+mocking and when do you use it?
+
+ANSWER :
+pytest is the modern standard; unittest is the built-in alternative.
+
+  # module: calculator.py
+  def add(a, b): return a + b
+  def divide(a, b):
+      if b == 0: raise ValueError("Cannot divide by zero")
+      return a / b
+
+  # test_calculator.py (pytest style)
+  import pytest
+  from calculator import add, divide
+
+  def test_add():
+      assert add(2, 3) == 5
+      assert add(-1, 1) == 0
+
+  def test_divide_normal():
+      assert divide(10, 2) == 5.0
+
+  def test_divide_by_zero():
+      with pytest.raises(ValueError, match="Cannot divide by zero"):
+          divide(10, 0)
+
+MOCKING — Replace real dependencies (database, HTTP, file I/O) with
+controlled fake objects during tests.
+
+  from unittest.mock import patch, MagicMock
+
+  def get_user(user_id):
+      return db.query(f"SELECT * FROM users WHERE id={user_id}")
+
+  def test_get_user():
+      with patch("mymodule.db") as mock_db:
+          mock_db.query.return_value = {"id": 1, "name": "Alice"}
+          result = get_user(1)
+          assert result["name"] == "Alice"
+          mock_db.query.assert_called_once()
+
+Run tests: pytest -v  |  Coverage: pytest --cov=mymodule
+
+KEYWORDS : pytest, unittest, mock, patch, assert, TDD, test isolation
+
+================================================================================
+END OF FILE — Python_Interview_QA.txt — 20 Questions
+================================================================================

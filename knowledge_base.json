@@ -1,0 +1,551 @@
+{
+  "technical": {
+    "python": {
+      "beginner": {
+        "topics": ["variables", "loops", "functions", "lists", "dictionaries", "basic OOP"],
+        "questions": [
+          "What is the difference between a list and a tuple in Python?",
+          "Explain how a for loop works in Python with an example.",
+          "What is a function and why do we use it?",
+          "What are Python dictionaries used for?",
+          "What is the difference between == and is in Python?"
+        ],
+        "key_concepts": ["mutability", "iteration", "scope", "data types"],
+        "preparation_tips": [
+          "Practice writing Python functions from scratch daily.",
+          "Understand mutable vs immutable types with examples.",
+          "Study Python built-in data structures: list, tuple, dict, set.",
+          "Use Python Tutor to visualise variable scope.",
+          "Solve 5 easy problems on LeetCode or HackerRank weekly."
+        ]
+      },
+      "intermediate": {
+        "topics": ["decorators", "generators", "comprehensions", "error handling", "file I/O", "OOP principles"],
+        "questions": [
+          "What is a Python decorator and how does it work?",
+          "Explain the difference between a generator and a regular function.",
+          "What are list comprehensions and when should you use them?",
+          "How does Python handle exceptions? Explain try/except/finally.",
+          "What is the difference between *args and **kwargs?"
+        ],
+        "key_concepts": ["lazy evaluation", "DRY principle", "SOLID", "context managers"],
+        "preparation_tips": [
+          "Build a small project using decorators (e.g., a retry decorator).",
+          "Read PEP 8 and enforce it with a linter.",
+          "Practice writing generators for large data processing.",
+          "Understand Python's data model (__dunder__ methods).",
+          "Study design patterns: Factory, Singleton, Observer."
+        ]
+      },
+      "senior": {
+        "topics": ["concurrency", "metaclasses", "design patterns", "performance optimization", "testing"],
+        "questions": [
+          "Explain the GIL and its impact on multi-threading in Python.",
+          "What are metaclasses and when would you use them?",
+          "How do you approach performance profiling and optimization in Python?",
+          "Describe the differences between threading, multiprocessing, and asyncio.",
+          "How do you design a scalable Python application?"
+        ],
+        "key_concepts": ["GIL", "event loop", "WSGI/ASGI", "profiling", "design patterns"],
+        "preparation_tips": [
+          "Profile a real application with cProfile or Py-Spy.",
+          "Build an async HTTP client with asyncio and aiohttp.",
+          "Study CPython internals and memory model.",
+          "Practice system design interviews using Python-specific patterns.",
+          "Contribute to an open-source Python project."
+        ]
+      }
+    },
+    "javascript": {
+      "beginner": {
+        "topics": ["variables", "DOM manipulation", "events", "functions", "arrays"],
+        "questions": [
+          "What is the difference between var, let, and const?",
+          "How do you select an HTML element using JavaScript?",
+          "What is an event listener and how do you use it?",
+          "Explain the difference between null and undefined.",
+          "What are arrow functions in JavaScript?"
+        ],
+        "key_concepts": ["hoisting", "scope", "DOM", "event bubbling"],
+        "preparation_tips": [
+          "Build 3 mini web projects (to-do list, calculator, quiz app).",
+          "Study MDN documentation for core JS concepts.",
+          "Understand the difference between == and === thoroughly.",
+          "Practice DOM manipulation without any framework.",
+          "Learn ES6+ features: let/const, template literals, destructuring."
+        ]
+      },
+      "intermediate": {
+        "topics": ["promises", "async/await", "closures", "prototypes", "ES6+ features"],
+        "questions": [
+          "What is a closure in JavaScript? Give an example.",
+          "How do Promises work? Explain the Promise chain.",
+          "What is the difference between async/await and Promises?",
+          "Explain prototypal inheritance in JavaScript.",
+          "What is the event loop in JavaScript?"
+        ],
+        "key_concepts": ["microtask queue", "prototype chain", "lexical scope", "callback hell"],
+        "preparation_tips": [
+          "Study Jake Archibald's event loop talk for deep understanding.",
+          "Build a project using Fetch API and async/await.",
+          "Practice explaining closures with concrete examples.",
+          "Understand how 'this' behaves in different contexts.",
+          "Learn functional programming concepts: map, filter, reduce."
+        ]
+      },
+      "senior": {
+        "topics": ["performance", "security", "design patterns", "module systems", "testing"],
+        "questions": [
+          "How do you optimize JavaScript performance in a large-scale application?",
+          "Explain common XSS and CSRF vulnerabilities and how to prevent them.",
+          "What are JavaScript design patterns you commonly use?",
+          "How do you manage state in a complex front-end application?",
+          "Explain the differences between CommonJS and ES Modules."
+        ],
+        "key_concepts": ["memoization", "tree shaking", "CORS", "SPA architecture"],
+        "preparation_tips": [
+          "Audit a web app with Lighthouse and fix performance issues.",
+          "Study the OWASP Top 10 security vulnerabilities.",
+          "Practice implementing design patterns: Observer, Module, Facade.",
+          "Build a state management solution from scratch.",
+          "Learn web performance metrics: LCP, FID, CLS."
+        ]
+      }
+    },
+    "data_science": {
+      "beginner": {
+        "topics": ["pandas", "numpy", "data cleaning", "basic statistics", "matplotlib"],
+        "questions": [
+          "What is the difference between a Series and a DataFrame in pandas?",
+          "How do you handle missing values in a dataset?",
+          "What is the difference between mean, median, and mode?",
+          "How do you read a CSV file using pandas?",
+          "What is NumPy and why is it used in data science?"
+        ],
+        "key_concepts": ["data types", "null handling", "descriptive statistics", "vectorization"],
+        "preparation_tips": [
+          "Complete the Kaggle Python and Pandas micro-courses.",
+          "Clean and analyse a real dataset from Kaggle.",
+          "Practice plotting with Matplotlib and Seaborn.",
+          "Understand the difference between correlation and causation.",
+          "Learn basic SQL — it is asked in almost every data role interview."
+        ]
+      },
+      "intermediate": {
+        "topics": ["machine learning", "scikit-learn", "feature engineering", "model evaluation", "SQL"],
+        "questions": [
+          "What is the difference between supervised and unsupervised learning?",
+          "Explain the bias-variance tradeoff.",
+          "What is cross-validation and why is it important?",
+          "How do you handle imbalanced datasets?",
+          "What is feature scaling and when is it needed?"
+        ],
+        "key_concepts": ["overfitting", "regularization", "precision/recall", "confusion matrix"],
+        "preparation_tips": [
+          "Build an end-to-end ML project and publish it on GitHub.",
+          "Practice explaining the bias-variance tradeoff with diagrams.",
+          "Study SQL window functions — very common in DS interviews.",
+          "Understand evaluation metrics deeply: F1, AUC-ROC, RMSE.",
+          "Do at least one Kaggle competition to build portfolio."
+        ]
+      },
+      "senior": {
+        "topics": ["deep learning", "MLOps", "distributed computing", "A/B testing", "system design"],
+        "questions": [
+          "How do you design an end-to-end ML pipeline for production?",
+          "Explain the difference between batch and online learning.",
+          "What are transformer models and how do they work?",
+          "How do you monitor model drift in production?",
+          "Describe your approach to A/B testing a machine learning model."
+        ],
+        "key_concepts": ["CI/CD for ML", "feature store", "model registry", "data versioning"],
+        "preparation_tips": [
+          "Study MLOps tooling: MLflow, DVC, Kubeflow, or SageMaker.",
+          "Practice system design: design a recommendation system.",
+          "Understand transformer architecture thoroughly (Attention is All You Need).",
+          "Learn about feature stores and their role in production ML.",
+          "Build a CI/CD pipeline for a machine learning model."
+        ]
+      }
+    },
+    "web_development": {
+      "beginner": {
+        "topics": ["HTML", "CSS", "basic JavaScript", "HTTP", "responsive design"],
+        "questions": [
+          "What is the difference between HTML, CSS, and JavaScript?",
+          "What are semantic HTML elements? Give examples.",
+          "How does CSS specificity work?",
+          "What is the difference between GET and POST requests?",
+          "How do you make a website responsive?"
+        ],
+        "key_concepts": ["box model", "flexbox", "DNS", "HTTP status codes"],
+        "preparation_tips": [
+          "Build a responsive portfolio website from scratch.",
+          "Practice CSS flexbox and grid with games like Flexbox Froggy.",
+          "Understand how browsers render HTML/CSS (critical rendering path).",
+          "Learn Git basics: commit, branch, merge, pull request.",
+          "Study HTTP methods and status codes thoroughly."
+        ]
+      },
+      "intermediate": {
+        "topics": ["React/Vue", "REST APIs", "databases", "authentication", "deployment"],
+        "questions": [
+          "What is the Virtual DOM and why is it used in React?",
+          "How does JWT authentication work?",
+          "What is the difference between SQL and NoSQL databases?",
+          "Explain RESTful API design principles.",
+          "What is CORS and why does it exist?"
+        ],
+        "key_concepts": ["state management", "component lifecycle", "indexing", "OAuth"],
+        "preparation_tips": [
+          "Build a full-stack app with React frontend and REST API backend.",
+          "Implement JWT authentication in a personal project.",
+          "Study React hooks deeply: useState, useEffect, useContext.",
+          "Practice database design and normalization.",
+          "Deploy a project on Vercel, Netlify, or Heroku."
+        ]
+      },
+      "senior": {
+        "topics": ["micro-frontends", "web security", "CI/CD", "performance at scale", "architecture"],
+        "questions": [
+          "How would you architect a large-scale web application?",
+          "Explain micro-frontend architecture and its trade-offs.",
+          "How do you handle web security: XSS, CSRF, CSP?",
+          "Describe your approach to CI/CD for a web application.",
+          "How do you measure and optimize Core Web Vitals?"
+        ],
+        "key_concepts": ["CDN", "SSR vs CSR", "service workers", "web security headers", "scalability"],
+        "preparation_tips": [
+          "Study system design for web: load balancing, CDN, caching.",
+          "Implement a micro-frontend with Module Federation.",
+          "Audit a production app's Core Web Vitals and improve them.",
+          "Study advanced React patterns: render props, HOCs, compound components.",
+          "Learn container orchestration basics with Docker and Kubernetes."
+        ]
+      }
+    },
+    "java": {
+      "beginner": {
+        "topics": ["OOP basics", "data types", "control flow", "arrays", "String handling"],
+        "questions": [
+          "What are the four pillars of OOP? Explain with Java examples.",
+          "What is the difference between == and .equals() in Java?",
+          "What is the difference between an abstract class and an interface?",
+          "Explain the concept of method overloading and overriding.",
+          "What is a constructor and how does it differ from a method?"
+        ],
+        "key_concepts": ["inheritance", "polymorphism", "encapsulation", "abstraction"],
+        "preparation_tips": [
+          "Practice core OOP concepts by modelling real-world objects in Java.",
+          "Understand Java memory model: heap vs stack.",
+          "Study String immutability and the String pool.",
+          "Do 10 easy Java problems on LeetCode.",
+          "Learn the Collections framework: List, Set, Map."
+        ]
+      },
+      "intermediate": {
+        "topics": ["Collections", "generics", "multithreading", "Java 8+ features", "exception handling"],
+        "questions": [
+          "What is the difference between ArrayList and LinkedList?",
+          "Explain Java Generics and why they are useful.",
+          "What is the difference between synchronized and volatile in Java?",
+          "How do Java 8 streams and lambda expressions work?",
+          "What is the difference between checked and unchecked exceptions?"
+        ],
+        "key_concepts": ["thread safety", "functional interfaces", "Optional", "Stream API"],
+        "preparation_tips": [
+          "Build a project using Java 8 streams and lambdas.",
+          "Study the Java memory model and garbage collection.",
+          "Practice multithreading: Producer-Consumer, Dining Philosophers.",
+          "Learn Spring Boot basics for web and REST API development.",
+          "Study common data structures and algorithms in Java."
+        ]
+      },
+      "senior": {
+        "topics": ["JVM internals", "Spring Boot", "microservices", "performance tuning", "design patterns"],
+        "questions": [
+          "How does the JVM manage memory? Explain GC algorithms.",
+          "How do you design a microservices architecture with Spring Boot?",
+          "What are common performance bottlenecks in Java applications?",
+          "Explain the SOLID principles with Java examples.",
+          "How do you implement distributed transactions in microservices?"
+        ],
+        "key_concepts": ["GC tuning", "Spring ecosystem", "circuit breaker", "distributed systems"],
+        "preparation_tips": [
+          "Profile a Java application with JProfiler or VisualVM.",
+          "Build a microservices project with Spring Boot and Docker.",
+          "Study GC algorithms: G1, ZGC, Shenandoah.",
+          "Implement common design patterns: Builder, Strategy, Command.",
+          "Practice distributed systems concepts: CAP theorem, eventual consistency."
+        ]
+      }
+    },
+    "devops": {
+      "beginner": {
+        "topics": ["Linux basics", "Git", "CI/CD concepts", "Docker basics", "cloud fundamentals"],
+        "questions": [
+          "What is the difference between DevOps and traditional software development?",
+          "What is a container and how does Docker work?",
+          "Explain the concept of CI/CD.",
+          "What is the difference between Git merge and Git rebase?",
+          "What is Infrastructure as Code (IaC)?"
+        ],
+        "key_concepts": ["version control", "containerisation", "automation", "cloud"],
+        "preparation_tips": [
+          "Set up a Linux VM and practise common shell commands daily.",
+          "Build a simple CI/CD pipeline with GitHub Actions.",
+          "Run a Docker container from scratch and learn Dockerfile syntax.",
+          "Study AWS/Azure/GCP free tier — create a VM and deploy an app.",
+          "Learn Git branching strategies: GitFlow, trunk-based development."
+        ]
+      },
+      "intermediate": {
+        "topics": ["Kubernetes", "Terraform", "monitoring", "Jenkins", "AWS/Azure services"],
+        "questions": [
+          "How does Kubernetes manage containerised workloads?",
+          "What is Terraform and how does it enable IaC?",
+          "How do you monitor a production system? Which tools would you use?",
+          "Explain blue-green and canary deployment strategies.",
+          "What is the difference between Kubernetes Deployment and StatefulSet?"
+        ],
+        "key_concepts": ["orchestration", "IaC", "observability", "deployment strategies"],
+        "preparation_tips": [
+          "Deploy a multi-container app on Kubernetes (Minikube locally).",
+          "Write Terraform scripts to provision cloud infrastructure.",
+          "Set up Prometheus and Grafana for monitoring.",
+          "Study the 12-Factor App methodology.",
+          "Obtain AWS Solutions Architect Associate or equivalent certification."
+        ]
+      },
+      "senior": {
+        "topics": ["platform engineering", "SRE practices", "security", "cost optimisation", "architecture"],
+        "questions": [
+          "How do you design a highly available, fault-tolerant system on cloud?",
+          "What is Site Reliability Engineering and how does it differ from DevOps?",
+          "How do you implement security in a CI/CD pipeline (DevSecOps)?",
+          "How do you approach cloud cost optimisation?",
+          "Describe your experience designing a multi-region deployment."
+        ],
+        "key_concepts": ["SLO/SLA/SLI", "chaos engineering", "FinOps", "zero-trust security"],
+        "preparation_tips": [
+          "Study Google SRE book — essential for senior DevOps/SRE roles.",
+          "Implement chaos engineering with Chaos Monkey or Gremlin.",
+          "Practice cloud architecture design with AWS Well-Architected Framework.",
+          "Study FinOps principles for cloud cost management.",
+          "Build a platform engineering solution with internal developer portal."
+        ]
+      }
+    },
+    "react": {
+      "beginner": {
+        "topics": ["JSX", "components", "props", "state", "event handling"],
+        "questions": [
+          "What is JSX and how does it differ from HTML?",
+          "What is the difference between a class component and a functional component?",
+          "How do props work in React?",
+          "What is state in React and why is it important?",
+          "How does React handle events differently from plain JavaScript?"
+        ],
+        "key_concepts": ["virtual DOM", "one-way data flow", "component tree", "re-rendering"],
+        "preparation_tips": [
+          "Build a to-do list and a weather app with React from scratch.",
+          "Understand the component lifecycle thoroughly.",
+          "Practice controlled vs uncontrolled form components.",
+          "Study React DevTools for debugging component state.",
+          "Read the official React documentation carefully."
+        ]
+      },
+      "intermediate": {
+        "topics": ["hooks", "context API", "React Router", "performance", "testing"],
+        "questions": [
+          "Explain the rules of hooks and why they exist.",
+          "How does the useEffect hook work? Explain the dependency array.",
+          "What is the Context API and when would you use it over Redux?",
+          "How do you prevent unnecessary re-renders in React?",
+          "How do you test React components with React Testing Library?"
+        ],
+        "key_concepts": ["memoization", "useCallback", "useMemo", "lazy loading"],
+        "preparation_tips": [
+          "Build a project with React Router v6 and lazy loading.",
+          "Implement a custom hook for a real use case.",
+          "Profile a React app with the React Profiler.",
+          "Learn React Testing Library and write unit/integration tests.",
+          "Study server-side rendering with Next.js."
+        ]
+      },
+      "senior": {
+        "topics": ["architecture", "micro-frontends", "performance optimisation", "advanced patterns", "Next.js"],
+        "questions": [
+          "How do you architect a large React application for scalability?",
+          "Explain React's reconciliation algorithm.",
+          "How would you implement micro-frontends with React?",
+          "What are render props and higher-order components? When do you use each?",
+          "How do you handle code splitting and lazy loading in a production React app?"
+        ],
+        "key_concepts": ["concurrent mode", "Suspense", "code splitting", "hydration"],
+        "preparation_tips": [
+          "Study React concurrent features and the new React 18 APIs.",
+          "Build a micro-frontend with Webpack Module Federation.",
+          "Implement advanced state management: Zustand, Jotai, or Redux Toolkit.",
+          "Study Next.js App Router and server components.",
+          "Practice system design for frontend-heavy applications."
+        ]
+      }
+    },
+    "sql_database": {
+      "beginner": {
+        "topics": ["SELECT queries", "filtering", "sorting", "basic joins", "aggregate functions"],
+        "questions": [
+          "What is the difference between WHERE and HAVING in SQL?",
+          "Explain the difference between INNER JOIN and LEFT JOIN.",
+          "What are aggregate functions? Give three examples.",
+          "What is a primary key and why is it important?",
+          "How do you remove duplicate rows from a query result?"
+        ],
+        "key_concepts": ["relational model", "ACID", "normalisation", "primary/foreign key"],
+        "preparation_tips": [
+          "Practice SQL daily on SQLZoo or Mode Analytics.",
+          "Understand all JOIN types with visual diagrams.",
+          "Build a small database (e.g., library, e-commerce) from scratch.",
+          "Learn GROUP BY thoroughly — it is asked in almost every interview.",
+          "Study the difference between SQL and NoSQL databases."
+        ]
+      },
+      "intermediate": {
+        "topics": ["window functions", "subqueries", "indexes", "transactions", "stored procedures"],
+        "questions": [
+          "What are window functions and when would you use them?",
+          "How do indexes work and when should you add one?",
+          "Explain ACID properties of database transactions.",
+          "What is the difference between a correlated and a non-correlated subquery?",
+          "What is database normalisation? Explain 1NF, 2NF, 3NF."
+        ],
+        "key_concepts": ["query optimisation", "execution plan", "cardinality", "locking"],
+        "preparation_tips": [
+          "Practice window functions: ROW_NUMBER, RANK, LAG, LEAD.",
+          "Analyse query execution plans in PostgreSQL or MySQL.",
+          "Study database normalisation with real-world examples.",
+          "Learn transaction isolation levels: Read Uncommitted to Serializable.",
+          "Solve medium SQL problems on LeetCode."
+        ]
+      },
+      "senior": {
+        "topics": ["query optimisation", "sharding", "replication", "NoSQL", "database design"],
+        "questions": [
+          "How would you optimise a slow-running SQL query?",
+          "Explain database sharding and when you would use it.",
+          "What is the difference between optimistic and pessimistic locking?",
+          "How do you design a database schema for a high-traffic e-commerce platform?",
+          "Explain CAP theorem and how it applies to database selection."
+        ],
+        "key_concepts": ["horizontal scaling", "CAP theorem", "eventual consistency", "partitioning"],
+        "preparation_tips": [
+          "Practice database design with a real system (Twitter, Uber, Netflix).",
+          "Study PostgreSQL internals: MVCC, WAL, vacuum.",
+          "Understand MongoDB, Redis, Cassandra at a conceptual level.",
+          "Learn about read replicas, write-ahead logging, and failover.",
+          "Practice explaining CAP theorem with real database examples."
+        ]
+      }
+    }
+  },
+  "hr": {
+    "general": {
+      "all_levels": {
+        "topics": ["self-introduction", "motivation", "teamwork", "conflict resolution", "career goals"],
+        "questions": [
+          "Tell me about yourself.",
+          "Why are you interested in this role?",
+          "Describe a time you worked in a team to achieve a goal.",
+          "How do you handle conflict with a colleague?",
+          "Where do you see yourself in 5 years?",
+          "What is your greatest strength?",
+          "What is your greatest weakness?",
+          "Why are you leaving your current job?",
+          "Describe a challenging situation and how you handled it.",
+          "What motivates you at work?"
+        ],
+        "evaluation_criteria": [
+          "clarity of communication",
+          "use of STAR method (Situation, Task, Action, Result)",
+          "self-awareness",
+          "positive framing",
+          "alignment with role"
+        ],
+        "preparation_tips": [
+          "Prepare a 90-second 'Tell me about yourself' answer using Present-Past-Future structure.",
+          "Write out 5 STAR stories covering teamwork, conflict, failure, achievement, and leadership.",
+          "Research the company's mission, values, and recent news before the interview.",
+          "Practise answering questions aloud — not just in your head.",
+          "Prepare 3 thoughtful questions to ask the interviewer at the end."
+        ]
+      }
+    }
+  },
+  "behavioral": {
+    "general": {
+      "all_levels": {
+        "topics": ["leadership", "problem solving", "adaptability", "initiative", "failure and learning", "communication", "time management"],
+        "questions": [
+          "Tell me about a time you led a project or team.",
+          "Describe a situation where you had to solve a difficult technical or non-technical problem.",
+          "Give an example of a time you had to adapt quickly to a major change.",
+          "Tell me about a time you took initiative without being asked.",
+          "Describe a failure you experienced and what you learned from it.",
+          "Tell me about a time you had to explain a complex idea to a non-technical audience.",
+          "How do you prioritise when you have multiple deadlines at once?",
+          "Give an example of when you disagreed with your manager and how you handled it.",
+          "Tell me about a time you went above and beyond for a project or customer.",
+          "Describe a time you mentored or helped a colleague grow."
+        ],
+        "evaluation_criteria": [
+          "structured STAR method (Situation, Task, Action, Result)",
+          "specific and quantifiable outcomes",
+          "genuine self-reflection",
+          "evidence of growth mindset",
+          "relevance to the target role"
+        ],
+        "preparation_tips": [
+          "Map your top 5 career stories to the most common behavioral question categories.",
+          "Quantify results wherever possible: 'reduced processing time by 30%'.",
+          "Practice your STAR stories until they feel natural, not memorised.",
+          "Record yourself answering and watch it back to spot filler words.",
+          "Prepare failure stories that genuinely show learning, not just blame-shifting."
+        ]
+      }
+    }
+  },
+  "soft_skills": {
+    "general": {
+      "all_levels": {
+        "topics": ["communication", "emotional intelligence", "collaboration", "critical thinking", "adaptability", "professionalism"],
+        "questions": [
+          "How do you handle receiving critical feedback from a peer or manager?",
+          "Describe your communication style. How do you adapt it for different audiences?",
+          "How do you manage stress during high-pressure periods at work?",
+          "How do you ensure you stay productive when working remotely?",
+          "Describe how you build trust with people you work with.",
+          "How do you approach learning a new skill or technology quickly?",
+          "What strategies do you use to stay organised and meet deadlines?",
+          "How do you contribute to a positive team culture?",
+          "Tell me about a time you had to work with someone very different from you.",
+          "How do you balance being detail-oriented with meeting tight timelines?"
+        ],
+        "evaluation_criteria": [
+          "self-awareness and emotional maturity",
+          "concrete examples over abstract statements",
+          "evidence of collaboration and empathy",
+          "adaptability and growth mindset",
+          "clarity and confidence in communication"
+        ],
+        "preparation_tips": [
+          "Develop a habit of reflective journalling to identify your real strengths and blind spots.",
+          "Practice active listening techniques in everyday conversations.",
+          "Study EQ frameworks: self-awareness, self-regulation, motivation, empathy, social skills.",
+          "Collect feedback from colleagues and managers to calibrate self-perception.",
+          "Prepare examples that show you actively sought feedback and acted on it."
+        ]
+      }
+    }
+  }
+}
