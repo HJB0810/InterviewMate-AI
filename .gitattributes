@@ -1,11 +1,12 @@
-﻿# Normalise line endings: store as LF, checkout as platform-native
+﻿
+# Normalize line endings
 * text=auto
 
-# Force LF for all text source files
-*.py    text eol=lf
-*.md    text eol=lf
-*.txt   text eol=lf
-*.json  text eol=lf
-*.env*  text eol=lf
-*.toml  text eol=lf
-*.cfg   text eol=lf
+# Force LF for text source files
+*.py text eol=lf
+*.md text eol=lf
+*.txt text eol=lf
+*.json text eol=lf
+*.env* text eol=lf
+*.toml text eol=lf
+*.cfg text eol=lf
