@@ -56,72 +56,84 @@ def _normalise_role(job_role: str) -> Optional[str]:
     Returns None if no match is found.
     """
     role_lower = job_role.lower()
+
+    # Direct subject keys (set by the subject selector in the UI — exact match first)
+    _DIRECT_KEYS = {
+        "dsa", "django", "system_design",
+        "python", "javascript", "java", "react",
+        "sql", "sql_database", "devops", "data_science", "web_development",
+    }
+    if role_lower in _DIRECT_KEYS:
+        # Normalise aliases to the actual KB key
+        _alias = {"sql": "sql_database", "system_design": "web_development", "dsa": "python",
+                  "django": "python"}
+        return _alias.get(role_lower, role_lower)
+
     mapping = {
-        # Python
-        "python": "python",
-        "django": "python",
-        "flask": "python",
-        "fastapi": "python",
+        # Python / Django / Flask
+        "python":         "python",
+        "django":         "python",
+        "flask":          "python",
+        "fastapi":        "python",
         "backend python": "python",
         # JavaScript
-        "javascript": "javascript",
-        "js": "javascript",
-        "node": "javascript",
-        "nodejs": "javascript",
-        "typescript": "javascript",
+        "javascript":     "javascript",
+        "js":             "javascript",
+        "node":           "javascript",
+        "nodejs":         "javascript",
+        "typescript":     "javascript",
         # React
-        "react": "react",
-        "next.js": "react",
-        "nextjs": "react",
+        "react":          "react",
+        "next.js":        "react",
+        "nextjs":         "react",
         "frontend react": "react",
         # Java
-        "java": "java",
-        "spring": "java",
-        "spring boot": "java",
-        "android": "java",
-        "kotlin": "java",
+        "java":           "java",
+        "spring":         "java",
+        "spring boot":    "java",
+        "android":        "java",
+        "kotlin":         "java",
         # Data Science / ML
-        "data science": "data_science",
+        "data science":   "data_science",
         "data scientist": "data_science",
         "machine learning": "data_science",
-        "ml engineer": "data_science",
-        "ai engineer": "data_science",
-        "deep learning": "data_science",
-        "nlp": "data_science",
-        "data analyst": "data_science",
+        "ml engineer":    "data_science",
+        "ai engineer":    "data_science",
+        "deep learning":  "data_science",
+        "nlp":            "data_science",
+        "data analyst":   "data_science",
         # Web Development
         "web development": "web_development",
-        "web developer": "web_development",
-        "frontend": "web_development",
-        "front-end": "web_development",
-        "full stack": "web_development",
-        "fullstack": "web_development",
-        "html": "web_development",
-        "css": "web_development",
+        "web developer":  "web_development",
+        "frontend":       "web_development",
+        "front-end":      "web_development",
+        "full stack":     "web_development",
+        "fullstack":      "web_development",
+        "html":           "web_development",
+        "css":            "web_development",
         # DevOps / Cloud
-        "devops": "devops",
-        "sre": "devops",
+        "devops":         "devops",
+        "sre":            "devops",
         "site reliability": "devops",
-        "cloud": "devops",
-        "aws": "devops",
-        "azure": "devops",
-        "gcp": "devops",
-        "kubernetes": "devops",
-        "docker": "devops",
+        "cloud":          "devops",
+        "aws":            "devops",
+        "azure":          "devops",
+        "gcp":            "devops",
+        "kubernetes":     "devops",
+        "docker":         "devops",
         "platform engineer": "devops",
         # SQL / Database
-        "sql": "sql_database",
-        "database": "sql_database",
-        "dba": "sql_database",
-        "data engineer": "sql_database",
-        "postgresql": "sql_database",
-        "mysql": "sql_database",
-        # System Design
-        "system design": "web_development",
-        "architect": "web_development",
-        # DSA
-        "dsa": "python",
-        "algorithms": "python",
+        "sql":            "sql_database",
+        "database":       "sql_database",
+        "dba":            "sql_database",
+        "data engineer":  "sql_database",
+        "postgresql":     "sql_database",
+        "mysql":          "sql_database",
+        # System Design / DSA — mapped to best available KB key
+        "system design":  "web_development",
+        "architect":      "web_development",
+        "dsa":            "python",
+        "algorithms":     "python",
     }
     for keyword, kb_key in mapping.items():
         if keyword in role_lower:

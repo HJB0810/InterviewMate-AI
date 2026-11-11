@@ -19,6 +19,7 @@ Security notes:
 import os
 import json
 import re
+import time
 
 from ibm_watsonx_ai import APIClient, Credentials
 from ibm_watsonx_ai.foundation_models import ModelInference
@@ -27,9 +28,14 @@ from ibm_watsonx_ai.metanames import GenTextParamsMetaNames as GenParams
 import guardrails
 
 # ---------------------------------------------------------------------------
-# Model identifier
+# Model identifiers — tried in order; first one that responds is used
 # ---------------------------------------------------------------------------
-MODEL_ID = "ibm/granite-4-h-small"
+_MODEL_PREFERENCE = [
+    "mistralai/mistral-small-3-1-24b-instruct-2503",   # fast, great JSON, rarely congested
+    "meta-llama/llama-3-3-70b-instruct",               # fallback — larger but very reliable
+    "ibm/granite-4-h-small",                           # last resort — often rate-limited
+]
+MODEL_ID = _MODEL_PREFERENCE[0]   # kept for display / logging purposes
 
 # Maximum character length for any single user-supplied field injected into a prompt
 _MAX_FIELD_LEN = 300
@@ -60,8 +66,9 @@ _cached_client: ModelInference | None = None
 def _get_client() -> ModelInference:
     """
     Return a cached, authenticated ModelInference client.
-    Builds the client once and reuses it for every subsequent call,
-    avoiding repeated authentication round-trips.
+    Tries each model in _MODEL_PREFERENCE order with a quick probe; uses the
+    first one that responds without a 429.  Falls back automatically if the
+    preferred model is rate-limited.
     Raises EnvironmentError if credentials are missing.
     """
     global _cached_client
@@ -80,22 +87,44 @@ def _get_client() -> ModelInference:
         )
 
     credentials = Credentials(url=url, api_key=api_key)
-    client      = APIClient(credentials=credentials, project_id=project_id)
+    api_client  = APIClient(credentials=credentials, project_id=project_id)
 
-    _cached_client = ModelInference(
-        model_id=MODEL_ID,
-        api_client=client,
-        params={
-            # sample — allows temperature to take effect
-            GenParams.DECODING_METHOD:   "sample",
-            GenParams.MAX_NEW_TOKENS:    1024,
-            GenParams.MIN_NEW_TOKENS:    20,
-            GenParams.TEMPERATURE:       0.7,
-            GenParams.TOP_P:             0.9,
-            GenParams.REPETITION_PENALTY: 1.1,
-        },
-    )
-    return _cached_client
+    base_params = {
+        GenParams.DECODING_METHOD:    "greedy",
+        GenParams.MAX_NEW_TOKENS:     512,
+        GenParams.MIN_NEW_TOKENS:     10,
+        GenParams.REPETITION_PENALTY: 1.1,
+    }
+
+    last_exc = None
+    for model_id in _MODEL_PREFERENCE:
+        candidate = ModelInference(
+            model_id=model_id,
+            api_client=api_client,
+            params=base_params,
+        )
+        try:
+            # Quick 5-token probe to verify this model slot is available
+            candidate.generate_text(
+                prompt="Hi",
+                params={GenParams.MAX_NEW_TOKENS: 5},
+            )
+            _cached_client = candidate
+            return _cached_client
+        except Exception as exc:
+            err_str = str(exc)
+            is_rate_limit = (
+                "429" in err_str
+                or "consumption_limit_reached" in err_str
+                or "concurrent requests" in err_str.lower()
+            )
+            if is_rate_limit:
+                last_exc = exc
+                continue   # try next model
+            raise          # non-rate-limit error — surface immediately
+
+    # All models rate-limited
+    raise last_exc
 
 
 def _bust_client_cache() -> None:
@@ -160,6 +189,23 @@ def _build_question_prompt(
             f"\nDo NOT ask these previously asked questions:\n{avoid_lines}\n"
         )
 
+    # Human-readable subject label (used in the prompt so the model knows what to ask)
+    _SUBJECT_LABELS = {
+        "dsa":           "Data Structures & Algorithms (DSA)",
+        "django":        "Django (Python web framework)",
+        "system_design": "System Design",
+        "sql":           "SQL & Databases",
+        "sql_database":  "SQL & Databases",
+        "python":        "Python",
+        "javascript":    "JavaScript",
+        "java":          "Java",
+        "react":         "React",
+        "devops":        "DevOps & Cloud",
+        "data_science":  "Data Science & Machine Learning",
+        "web_development": "Web Development",
+    }
+    subject_label = _SUBJECT_LABELS.get(role.lower(), role)
+
     itype_lower = itype.lower()
     if "hr" in itype_lower:
         context_block = (
@@ -173,6 +219,7 @@ def _build_question_prompt(
         )
     else:
         context_block = (
+            f"Subject: {subject_label}\n"
             f"Relevant technical topics: {topics}\n"
             f"Key concepts to probe: {key_concepts}\n"
         )
@@ -183,7 +230,7 @@ You are an expert interview coach. Generate exactly {num_questions} interview qu
 Output ONLY a numbered list of questions (1. ... 2. ... etc.), nothing else.
 <|user|>
 Candidate: {name}
-Job Role: {role}
+Subject / Job Role: {subject_label}
 Experience Level: {level}
 Skills: {skls}
 Interview Type: {itype}
@@ -193,7 +240,7 @@ Knowledge Base Context:
 Sample reference questions (do NOT reuse verbatim):
 {sample_qs}
 {avoid_block}
-Generate {num_questions} personalised {itype} interview questions for this candidate.
+Generate {num_questions} {subject_label} interview questions specifically focused on {subject_label} for this candidate.
 <|assistant|>
 """
     return prompt
@@ -362,6 +409,42 @@ def _extract_json(text: str) -> dict:
 
 
 # ---------------------------------------------------------------------------
+# Retry helper — handles 429 rate-limit responses from watsonx.ai
+# ---------------------------------------------------------------------------
+
+def _generate_with_retry(
+    model: ModelInference,
+    prompt: str,
+    max_tokens: int = 512,
+    max_retries: int = 4,
+) -> str:
+    """
+    Call model.generate_text() with a per-call token cap and automatically
+    retry on HTTP 429 (rate-limit) with exponential back-off.
+
+    Waits: 5s → 10s → 20s → 40s before giving up.
+    Any other exception is re-raised immediately.
+    """
+    params = {GenParams.MAX_NEW_TOKENS: max_tokens}
+    delay = 5
+    for attempt in range(max_retries + 1):
+        try:
+            return model.generate_text(prompt=prompt, params=params)
+        except Exception as exc:
+            err_str = str(exc)
+            is_rate_limit = (
+                "429" in err_str
+                or "consumption_limit_reached" in err_str
+                or "concurrent requests" in err_str.lower()
+            )
+            if is_rate_limit and attempt < max_retries:
+                time.sleep(delay)
+                delay *= 2   # exponential back-off
+                continue
+            raise  # non-429 errors, or retries exhausted
+
+
+# ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
 
@@ -394,7 +477,9 @@ def generate_questions(
         previously_asked=previously_asked,
     )
 
-    response  = model.generate_text(prompt=prompt)
+    # ~50 tokens per question × max 8 questions + headroom = 450
+    max_tokens = min(50 * num_questions + 50, 450)
+    response  = _generate_with_retry(model, prompt, max_tokens=max_tokens)
     lines     = [line.strip() for line in response.strip().splitlines() if line.strip()]
     questions = []
     for line in lines:
@@ -442,7 +527,8 @@ def evaluate_answer(
         experience_level, interview_type, rag_context,
     )
 
-    response   = model.generate_text(prompt=prompt)
+    # JSON with 6 short fields — 500 tokens is ample
+    response   = _generate_with_retry(model, prompt, max_tokens=500)
     raw_result = _extract_json(response)
 
     # Validate through Pydantic — clamps score, strips fabrication claims
@@ -476,7 +562,8 @@ def get_preparation_strategy(
         job_role, experience_level, skills, interview_type, rag_context,
     )
 
-    response   = model.generate_text(prompt=prompt)
+    # JSON with 5 fields, each a short paragraph — 600 tokens is ample
+    response   = _generate_with_retry(model, prompt, max_tokens=600)
     raw_result = _extract_json(response)
 
     # Validate through Pydantic — fills missing fields with safe defaults

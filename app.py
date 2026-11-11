@@ -7,15 +7,11 @@ Run with:
     streamlit run app.py
 """
 
-import uuid
 import streamlit as st
 from dotenv import load_dotenv
 
 import rag_engine
 import granite_service
-import guardrails
-import interview_history
-from guardrails import GuardrailViolation
 
 # Load .env file if present
 load_dotenv()
@@ -51,6 +47,28 @@ st.markdown(
     .score-high { background: #198038; }
     .score-mid  { background: #f1c21b; color: #1c1c1c !important; }
     .score-low  { background: #da1e28; }
+
+    /* ── subject tile grid ── */
+    .subject-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-top: 0.4rem;
+    }
+    .subject-tile {
+        background: #f4f4f4;
+        border: 2px solid #e0e0e0;
+        border-radius: 8px;
+        padding: 0.55rem 1rem;
+        font-size: 0.92rem;
+        font-weight: 600;
+        cursor: pointer;
+    }
+    .subject-tile.active {
+        border-color: #0f62fe;
+        background: #0f62fe;
+        color: #fff;
+    }
 
     /* ── question card ── */
     .q-card {
@@ -100,18 +118,32 @@ st.markdown(
 # ---------------------------------------------------------------------------
 # Session-state initialisation
 # ---------------------------------------------------------------------------
+# Technical subject catalogue shown when "Technical Interview" is chosen
+_TECH_SUBJECTS = {
+    "🐍 Python":        "python",
+    "🗄️ SQL":           "sql",
+    "☕ Java":          "java",
+    "⚛️ React":         "react",
+    "🌐 JavaScript":    "javascript",
+    "🦄 Django":        "django",
+    "🏗️ System Design": "system_design",
+    "📊 DSA":           "dsa",
+    "🔧 DevOps":        "devops",
+    "🤖 Data Science":  "data_science",
+    "🌍 Web Dev":       "web_development",
+}
+
 def _init_state():
     defaults = {
-        "questions":        [],
-        "current_q_idx":    0,
-        "answers":          {},
-        "feedbacks":        {},
-        "rag_context":      {},
-        "profile":          {},
-        "prep_strategy":    {},
-        "stage":            "profile",  # profile | prep | interview | report
-        "session_id":       str(uuid.uuid4()),   # unique per browser session
-        "guardrail_warn":   "",                  # last guardrail message for display
+        "questions":         [],
+        "current_q_idx":     0,
+        "answers":           {},
+        "feedbacks":         {},
+        "rag_context":       {},
+        "profile":           {},
+        "prep_strategy":     {},   # IBM Granite-generated preparation strategy
+        "stage":             "profile",  # profile | prep | interview | report
+        "selected_subject":  None,       # set when Technical Interview + subject chosen
     }
     for k, v in defaults.items():
         if k not in st.session_state:
@@ -127,13 +159,9 @@ def _score_badge(score: int) -> str:
     return f'<span class="score-pill {css}">{score}/10</span>'
 
 def _reset():
-    # Clear history for this session before resetting
-    sid = st.session_state.get("session_id")
-    if sid:
-        interview_history.clear_session(sid)
     for key in ["questions", "current_q_idx", "answers",
                 "feedbacks", "rag_context", "profile", "prep_strategy",
-                "stage", "session_id", "guardrail_warn"]:
+                "stage", "selected_subject"]:
         if key in st.session_state:
             del st.session_state[key]
     _init_state()
@@ -177,6 +205,38 @@ if st.session_state.stage == "profile":
         horizontal=True,
     )
 
+    # ── Subject selector — only for Technical Interview ──
+    if itype == "Technical Interview":
+        st.markdown("#### 🎯 Select a Subject to Focus On")
+        st.caption("Click a subject — your questions will be tailored specifically to it.")
+
+        # Build clickable subject buttons in a 4-column grid
+        subject_keys   = list(_TECH_SUBJECTS.keys())
+        subject_cols   = st.columns(4)
+        current_subj   = st.session_state.selected_subject
+
+        for idx, label in enumerate(subject_keys):
+            with subject_cols[idx % 4]:
+                kb_key   = _TECH_SUBJECTS[label]
+                is_active = current_subj == kb_key
+                btn_label = f"✅ {label}" if is_active else label
+                if st.button(btn_label, key=f"subj_{kb_key}", use_container_width=True):
+                    st.session_state.selected_subject = kb_key
+                    st.rerun()
+
+        # Show currently selected subject as a banner
+        if st.session_state.selected_subject:
+            chosen_label = next(
+                (k for k, v in _TECH_SUBJECTS.items()
+                 if v == st.session_state.selected_subject), ""
+            )
+            st.success(f"✅ Subject selected: **{chosen_label}** — questions will focus on this topic.")
+        else:
+            st.info("💡 No subject selected — questions will be based on your Job Role field above.")
+    else:
+        # Clear any previously selected subject when switching away from Technical
+        st.session_state.selected_subject = None
+
     num_q = st.slider("Number of questions", min_value=3, max_value=8, value=5)
 
     st.divider()
@@ -188,65 +248,41 @@ if st.session_state.stage == "profile":
         prep_btn = st.button("📚 Get Preparation Strategy First", use_container_width=True)
 
     if start_btn or prep_btn:
-        if not name.strip() or not role.strip() or not skills.strip():
-            st.warning("⚠️ Please fill in your Name, Job Role, and Skills before continuing.")
+        if not name.strip() or not skills.strip():
+            st.warning("⚠️ Please fill in your Name and Skills before continuing.")
             st.stop()
 
-        # ── Guardrail: validate profile (Pydantic) ──
-        try:
-            guardrails.validate_profile(
-                name=name,
-                job_role=role,
-                experience_level=exp,
-                skills=skills,
-                interview_type=itype,
-                num_questions=num_q,
-            )
-        except GuardrailViolation as gv:
-            st.error(f"⚠️ {gv}")
-            st.stop()
-
-        # ── Guardrail: scope check on job role and skills ──
-        try:
-            guardrails.check_scope(role + " " + skills)
-        except GuardrailViolation as gv:
-            st.warning(
-                f"🤖 {gv}\n\n"
-                "InterviewMate AI only supports interview preparation for "
-                "technical and HR roles."
-            )
+        # If a subject is selected, use it as the job role for RAG + prompts
+        effective_role = st.session_state.selected_subject or role.strip()
+        if not effective_role:
+            st.warning("⚠️ Please enter a Job Role or select a subject above.")
             st.stop()
 
         # ── RAG retrieval ──
         with st.spinner("Retrieving relevant knowledge base context…"):
             ctx = rag_engine.retrieve_context(
                 interview_type=itype,
-                job_role=role,
+                job_role=effective_role,
                 experience_level=exp,
                 skills=skills,
             )
 
         st.session_state.rag_context = ctx
         st.session_state.profile = {
-            "name": name, "role": role, "exp": exp,
-            "skills": skills, "itype": itype, "num_q": num_q,
+            "name":    name,
+            "role":    effective_role,
+            "exp":     exp,
+            "skills":  skills,
+            "itype":   itype,
+            "num_q":   num_q,
         }
-
-        # ── Register session in history ──
-        interview_history.create_session(
-            session_id=st.session_state.session_id,
-            candidate_name=name,
-            job_role=role,
-            interview_type=itype,
-            experience_level=exp,
-        )
 
         if prep_btn:
             # ── Generate preparation strategy ──
-            with st.spinner("IBM Granite is building your personalised preparation strategy…"):
+            with st.spinner("Building your personalised preparation strategy…"):
                 try:
                     strategy = granite_service.get_preparation_strategy(
-                        job_role=role,
+                        job_role=effective_role,
                         experience_level=exp,
                         skills=skills,
                         interview_type=itype,
@@ -256,54 +292,33 @@ if st.session_state.stage == "profile":
                     st.error(f"🔑 Credential error: {e}")
                     st.stop()
                 except Exception as e:
-                    st.error(f"❌ IBM Granite error: {e}")
+                    st.error(f"❌ AI error: {e}")
                     st.stop()
             st.session_state.prep_strategy = strategy
             st.session_state.stage = "prep"
             st.rerun()
 
         else:
-            # ── Retrieve history for dedup ──
-            prev_asked = interview_history.get_asked_questions(
-                st.session_state.session_id
-            )
-
-            # ── Generate questions ──
-            with st.spinner("IBM Granite is generating your personalised questions…"):
+            # ── Generate questions immediately ──
+            with st.spinner("Generating your personalised questions…"):
                 try:
                     questions = granite_service.generate_questions(
                         candidate_name=name,
-                        job_role=role,
+                        job_role=effective_role,
                         experience_level=exp,
                         skills=skills,
                         interview_type=itype,
                         rag_context=ctx,
                         num_questions=num_q,
-                        previously_asked=prev_asked,
                     )
                 except EnvironmentError as e:
                     st.error(f"🔑 Credential error: {e}")
                     st.stop()
                 except Exception as e:
-                    st.error(f"❌ IBM Granite error: {e}")
+                    st.error(f"❌ AI error: {e}")
                     st.stop()
 
-            # ── Dedup check ──
-            new_qs, dupe_qs = interview_history.filter_new_questions(
-                st.session_state.session_id, questions
-            )
-            if dupe_qs:
-                st.session_state.guardrail_warn = (
-                    f"⚠️ {len(dupe_qs)} question(s) were similar to previously "
-                    "asked questions and were filtered. Some repetition may occur "
-                    "if the knowledge base is exhausted."
-                )
-
-            # Record new questions into history
-            for q in new_qs:
-                interview_history.record_question(st.session_state.session_id, q)
-
-            st.session_state.questions     = questions   # show all (dedup is advisory)
+            st.session_state.questions     = questions
             st.session_state.current_q_idx = 0
             st.session_state.stage         = "interview"
             st.rerun()
@@ -463,10 +478,6 @@ elif st.session_state.stage == "interview":
                 st.session_state.current_q_idx -= 1
                 st.rerun()
 
-    # ── show guardrail warning if present ──
-    if st.session_state.get("guardrail_warn"):
-        st.info(st.session_state.guardrail_warn, icon="ℹ️")
-
     with col_submit:
         submit_label = (
             "✅ Submit & Evaluate"
@@ -476,19 +487,6 @@ elif st.session_state.stage == "interview":
         if st.button(submit_label, type="primary", use_container_width=True):
             if not answer.strip():
                 st.warning("Please write an answer before submitting.")
-                st.stop()
-
-            # ── Guardrail: validate answer submission ──
-            try:
-                guardrails.validate_answer_submission(
-                    question=questions[idx],
-                    answer=answer,
-                    job_role=p["role"],
-                    experience_level=p["exp"],
-                    interview_type=p["itype"],
-                )
-            except GuardrailViolation as gv:
-                st.error(f"⚠️ {gv}")
                 st.stop()
 
             st.session_state.answers[idx] = answer
